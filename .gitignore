@@ -1,7 +1,10 @@
-# Secrets: your API key lives here. Never commit it.
+# Secrets: your API keys live here. Never commit them.
 .env
 .env.*
 !.env.example
+
+# Books saved locally during development (real photos!)
+local_data/
 
 # Mac
 .DS_Store

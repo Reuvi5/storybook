@@ -1,41 +1,40 @@
 """
-Storybook: a cartoon "Jack and the Beanstalk" starring the child in the uploaded photo.
+Storybook: a cartoon "Jack and the Beanstalk" starring the person in the uploaded photo.
 
-Flow (one click):
-  1. The real photo -> ONE image call -> Jack's character design (also the book cover).
-  2. Jack's character image (NOT the photo) -> ONE image call per page -> the story pages.
-     The pages run at the same time.
-  3. The user downloads one PDF: cover, the story pages with the text drawn on top,
-     and an About Me page with the details they typed in.
+  - Sign in with Google (auth.py).
+  - Each user's books are saved (storage.py: AWS DynamoDB + S3, or a local folder in
+    development), so they're still there on the next visit.
+  - Books are drawn in the background (generator.py); the book page shows a progress
+    bar per image while it works.
+  - The finished book downloads as one PDF (book.py).
+  - Everything important is logged to the console (Render shows it under "Logs").
 
-Each image is exactly one API call. There are no automatic retries; if a page fails,
-the user can click "Try again" to remake only the missing pages.
-
-The API key is read from OPENAI_API_KEY (.env locally, Render's Environment tab when deployed).
+Secrets come from environment variables (.env locally, Render's Environment tab when
+deployed), never from the code. See .env.example and SETUP.md.
 """
 
-import base64
 import io
-import json
+import logging
 import os
 import re
-import shutil
-import tempfile
-import threading
+import secrets
 import time
 import uuid
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
+from datetime import timedelta
 
 from dotenv import load_dotenv
-from flask import Flask, abort, redirect, render_template, request, send_file, url_for
-from openai import OpenAI, OpenAIError
+
+load_dotenv()  # must run before the other modules read their settings
+
+from flask import Flask, abort, flash, jsonify, redirect, render_template, request, send_file, url_for
 from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.middleware.proxy_fix import ProxyFix
 
+import generator
 import story
+from auth import current_user, init_auth, login_required
 from book import build_pdf
+from storage import get_storage
 
 try:
     from pillow_heif import register_heif_opener  # iPhone HEIC photos (optional)
@@ -43,29 +42,44 @@ try:
 except ImportError:
     pass
 
-load_dotenv()
+# ---------------------------------------------------------------------------
+# Logging: one line per event, e.g. "2026-11-02 12:00:01 INFO storybook.generator image_done user=... image=page2 seconds=21.4"
+# ---------------------------------------------------------------------------
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logging.getLogger("httpx").setLevel(logging.WARNING)  # the OpenAI library is chatty
+log = logging.getLogger("storybook.app")
 
+# ---------------------------------------------------------------------------
+# App setup
+# ---------------------------------------------------------------------------
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024  # 15 MB photo cap
 
-# On Render, requests arrive through Render's proxy, which passes along the visitor's real
-# IP address in a header. This tells Flask to use it (needed for the per-person limit below).
-app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+# On Render, requests come through Render's proxy. This makes Flask see the visitor's real
+# address and that the site is https (needed for Google's sign-in redirect).
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
-# Limit: each person (IP address) can make this many books per hour.
-BOOKS_PER_WINDOW = 2
-WINDOW_SECONDS = 60 * 60
-_book_times = defaultdict(list)  # IP address -> times their recent books were started
-_limit_lock = threading.Lock()
+secret = os.environ.get("FLASK_SECRET_KEY")
+if not secret:
+    log.warning("FLASK_SECRET_KEY is not set: using a temporary key (everyone is signed out on restart)")
+    secret = secrets.token_hex(32)
+app.secret_key = secret
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=bool(os.environ.get("RENDER")),  # https-only cookies on Render
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+)
 
-MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-2")
-QUALITY = "low"         # fixed for every image (not shown to users)
-SIZE = "1024x1536"      # portrait book page
+storage = get_storage()
+app.extensions["storybook_storage"] = storage
+init_auth(app)
 
-# Generated books are kept on the server for a while, then deleted.
-BOOKS_DIR = Path(tempfile.gettempdir()) / "storybook"
-KEEP_SECONDS = 2 * 60 * 60  # 2 hours
-BOOK_ID = re.compile(r"^[0-9a-f]{32}$")
+# Each user can start this many books per hour (failed books don't count).
+BOOKS_PER_HOUR = int(os.environ.get("BOOKS_PER_HOUR", 2))
 
 # About Me fields: (form name, label, max length)
 DETAILS = [
@@ -90,216 +104,232 @@ def prepare_photo(raw: bytes) -> bytes:
     return buf.getvalue()
 
 
-def create_image(file_name: str, data: bytes, mime: str, prompt: str) -> bytes:
-    """ONE call to the image edit endpoint. Returns PNG bytes, or raises OpenAIError."""
-    result = OpenAI().images.edit(
-        model=MODEL,
-        image=(file_name, data, mime),
-        prompt=prompt,
-        size=SIZE,
-        quality=QUALITY,
+def get_own_book(book_id: str) -> dict:
+    """The signed-in user's book, or 404. Users can only ever see their own books."""
+    user = current_user()
+    book = storage.get_book(user["id"], book_id)
+    if not book:
+        abort(404)
+    return generator.recover_if_stalled(storage, user["id"], book)
+
+
+def wait_minutes(user_id: str) -> int:
+    """0 if the user may start a book now, otherwise roughly how many minutes to wait."""
+    hour_ago = time.time() - 3600
+    recent = sorted(
+        b["created_at"] for b in storage.list_books(user_id)
+        if b["created_at"] > hour_ago and b["status"] != "failed"
     )
-    return base64.b64decode(result.data[0].b64_json)
-
-
-def make_one_page(folder: Path, page: dict, character: bytes):
-    """Make one story page from Jack's character image. Returns an error message or None."""
-    try:
-        png = create_image("jack-character.png", character, "image/png", story.page_prompt(page))
-    except OpenAIError as e:
-        return str(e)
-    (folder / f"page{page['number']}.png").write_bytes(png)
-    return None
-
-
-def make_pages(folder: Path, numbers: list) -> dict:
-    """Make the given pages at the same time, one API call each. Returns {page number: error}."""
-    character = (folder / "character.png").read_bytes()
-    with ThreadPoolExecutor(max_workers=4) as pool:
-        jobs = {n: pool.submit(make_one_page, folder, story.PAGE_BY_NUMBER[n], character) for n in numbers}
-    return {n: job.result() for n, job in jobs.items() if job.result()}
-
-
-def book_folder(book_id: str) -> Path:
-    if not BOOK_ID.match(book_id):
-        abort(404)
-    folder = BOOKS_DIR / book_id
-    if not (folder / "meta.json").is_file():
-        abort(404)
-    return folder
-
-
-def load_meta(folder: Path) -> dict:
-    return json.loads((folder / "meta.json").read_text())
-
-
-def save_meta(folder: Path, meta: dict):
-    (folder / "meta.json").write_text(json.dumps(meta))
-
-
-def missing_pages(folder: Path) -> list:
-    return [p["number"] for p in story.PAGES if not (folder / f"page{p['number']}.png").is_file()]
-
-
-def delete_old_books():
-    if not BOOKS_DIR.is_dir():
-        return
-    for folder in BOOKS_DIR.iterdir():
-        if folder.is_dir() and time.time() - folder.stat().st_mtime > KEEP_SECONDS:
-            shutil.rmtree(folder, ignore_errors=True)
-
-
-def reserve_book(ip: str) -> int:
-    """Count a new book for this IP. Returns 0 if allowed, or the seconds to wait if over the limit."""
-    with _limit_lock:
-        now = time.time()
-        recent = [t for t in _book_times[ip] if now - t < WINDOW_SECONDS]
-        if len(recent) >= BOOKS_PER_WINDOW:
-            _book_times[ip] = recent
-            return int(WINDOW_SECONDS - (now - recent[0])) + 1
-        recent.append(now)
-        _book_times[ip] = recent
+    if len(recent) < BOOKS_PER_HOUR:
         return 0
+    return max(1, int((recent[-BOOKS_PER_HOUR] + 3600 - time.time()) // 60) + 1)
 
 
-def release_book(ip: str):
-    """Give the slot back if the book failed before anything was made."""
-    with _limit_lock:
-        if _book_times[ip]:
-            _book_times[ip].pop()
+def image_status_list(book: dict) -> list:
+    out = []
+    for name in generator.image_names():
+        info = book["images"].get(name, {})
+        status = info.get("status", "waiting")
+        out.append({
+            "name": name,
+            "label": generator.image_label(name),
+            "status": status,
+            "url": url_for("image", book_id=book["book_id"], name=name) if status == "done" else None,
+        })
+    return out
 
 
-def form_page(**kwargs):
-    return render_template("index.html", details=DETAILS, values=kwargs.pop("values", {}), **kwargs)
+@app.context_processor
+def inject_user():
+    return {"user": current_user(), "fake_images": generator.FAKE_IMAGES}
 
 
 # ---------------------------------------------------------------------------
-# Routes
+# Pages
 # ---------------------------------------------------------------------------
 @app.get("/")
 def index():
-    return form_page()
+    if not current_user():
+        return render_template("landing.html")
+    return render_template("index.html", details=DETAILS, values={}, books_per_hour=BOOKS_PER_HOUR)
+
+
+@app.get("/privacy")
+def privacy():
+    return render_template("privacy.html")
 
 
 @app.post("/make")
+@login_required
 def make():
-    delete_old_books()
+    user = current_user()
 
     values = {"name": request.form.get("name", "").strip()[:40]}
     for key, _label, max_len in DETAILS:
         values[key] = request.form.get(key, "").strip()[:max_len]
 
-    if not values["name"]:
-        return form_page(error="Please enter the child's name.", values=values)
+    def form_error(message):
+        return render_template("index.html", details=DETAILS, values=values,
+                               books_per_hour=BOOKS_PER_HOUR, error=message)
 
+    if not values["name"]:
+        return form_error("Please enter the name.")
     upload = request.files.get("photo")
     if not upload or not upload.filename:
-        return form_page(error="Please upload a photo of the child.", values=values)
+        return form_error("Please upload a photo.")
     try:
         photo = prepare_photo(upload.read())
     except (UnidentifiedImageError, ValueError):
-        return form_page(error="That file isn't an image I can read. Try a JPG or PNG.", values=values)
+        return form_error("That file isn't an image I can read. Try a JPG or PNG.")
+    if not generator.FAKE_IMAGES and not os.environ.get("OPENAI_API_KEY"):
+        return form_error("The server is missing its OpenAI API key.")
 
-    if not os.environ.get("OPENAI_API_KEY"):
-        return form_page(error="The server is missing its OpenAI API key.", values=values)
-
-    # Per-person limit: checked right before any paid API call.
-    ip = request.remote_addr or "unknown"
-    wait = reserve_book(ip)
+    wait = wait_minutes(user["id"])
     if wait:
-        minutes = max(1, (wait + 59) // 60)
-        return form_page(
-            error=f"You can make {BOOKS_PER_WINDOW} books per hour. Please try again in about {minutes} minute{'s' if minutes != 1 else ''}.",
-            values=values,
-        )
+        log.info("rate_limited user=%s wait_minutes=%s", user["id"], wait)
+        return form_error(f"You can make {BOOKS_PER_HOUR} books per hour. Please try again in about {wait} minute{'s' if wait != 1 else ''}.")
 
-    # Step 1 - ONE call: the real photo -> Jack's character.
-    try:
-        character = create_image("photo.jpg", photo, "image/jpeg", story.CHARACTER_PROMPT)
-    except OpenAIError as e:
-        release_book(ip)  # nothing was made, so this attempt doesn't count
-        return form_page(error=f"Sorry, creating the character failed: {e}", values=values)
-
-    # The photo is only needed for step 1, so it is never saved. Only the cartoon is kept.
+    now = int(time.time())
     book_id = uuid.uuid4().hex
-    folder = BOOKS_DIR / book_id
-    folder.mkdir(parents=True)
-    (folder / "character.png").write_bytes(character)
-    save_meta(folder, {"details": values, "errors": {}})
-
-    # Step 2 - one call per page, drawn from Jack's character.
-    errors = make_pages(folder, [p["number"] for p in story.PAGES])
-    save_meta(folder, {"details": values, "errors": errors})
-
+    storage.put_image(user["id"], book_id, "photo", photo)
+    storage.create_book(user["id"], {
+        "book_id": book_id,
+        "created_at": now,
+        "updated_at": now,
+        "status": "generating",
+        "details": values,
+        "images": {name: {"status": "waiting"} for name in generator.image_names()},
+    })
+    log.info("book_created user=%s book=%s", user["id"], book_id)
+    generator.start_book(storage, user["id"], book_id)
     return redirect(url_for("book", book_id=book_id))
 
 
+@app.get("/books")
+@login_required
+def books():
+    user = current_user()
+    items = storage.list_books(user["id"])
+    for b in items:
+        b["cover_url"] = (url_for("image", book_id=b["book_id"], name="character")
+                          if b["images"].get("character", {}).get("status") == "done" else None)
+        b["created_text"] = time.strftime("%b %d, %Y", time.gmtime(b["created_at"]))
+    return render_template("books.html", books=items)
+
+
 @app.get("/book/<book_id>")
+@login_required
 def book(book_id):
-    folder = book_folder(book_id)
-    meta = load_meta(folder)
-    missing = missing_pages(folder)
+    b = get_own_book(book_id)
     return render_template(
         "book.html",
+        book=b,
         book_id=book_id,
         title=story.BOOK_TITLE,
         pages=story.PAGES,
         details=DETAILS,
-        values=meta["details"],
-        missing=missing,
-        errors=meta.get("errors", {}),
+        values=b["details"],
+        images=image_status_list(b),
+        failed=[i for i in image_status_list(b) if i["status"] == "failed"],
     )
+
+
+@app.get("/book/<book_id>/status")
+@login_required
+def status(book_id):
+    """Polled by the book page every 2 seconds while the book is being drawn."""
+    b = get_own_book(book_id)
+    images = image_status_list(b)
+    return jsonify({
+        "status": b["status"],
+        "done": sum(1 for i in images if i["status"] == "done"),
+        "total": len(images),
+        "images": images,
+    })
 
 
 @app.post("/book/<book_id>/retry")
+@login_required
 def retry(book_id):
-    """Remake only the pages that failed, from the same Jack."""
-    folder = book_folder(book_id)
-    meta = load_meta(folder)
-    missing = missing_pages(folder)
-    if missing:
-        meta["errors"] = make_pages(folder, missing)
-        save_meta(folder, meta)
+    user = current_user()
+    b = get_own_book(book_id)
+    if b["status"] == "needs_retry":
+        failed = [n for n in generator.image_names()[1:] if b["images"].get(n, {}).get("status") == "failed"]
+        if failed:
+            generator.start_retry(storage, user["id"], book_id, failed)
     return redirect(url_for("book", book_id=book_id))
 
 
-@app.get("/book/<book_id>/image/<name>.png")
+@app.get("/book/<book_id>/image/<name>")
+@login_required
 def image(book_id, name):
-    folder = book_folder(book_id)
-    allowed = {"character"} | {f"page{p['number']}" for p in story.PAGES}
-    path = folder / f"{name}.png"
-    if name not in allowed or not path.is_file():
+    user = current_user()
+    get_own_book(book_id)
+    if name not in ["photo"] + generator.image_names():
         abort(404)
-    return send_file(path, mimetype="image/png")
+    url = storage.image_url(user["id"], book_id, name)
+    if url:  # AWS: a temporary link straight to the private S3 image
+        return redirect(url)
+    data = storage.get_image(user["id"], book_id, name)
+    if data is None:
+        abort(404)
+    return send_file(io.BytesIO(data), mimetype="image/jpeg" if name == "photo" else "image/png")
 
 
 @app.get("/book/<book_id>/download")
+@login_required
 def download(book_id):
-    folder = book_folder(book_id)
-    if missing_pages(folder):
+    user = current_user()
+    b = get_own_book(book_id)
+    if b["status"] != "done":
         return redirect(url_for("book", book_id=book_id))
-    meta = load_meta(folder)
-    details = meta["details"]
+    details = b["details"]
 
-    images = {"character": (folder / "character.png").read_bytes()}
+    images = {"character": storage.get_image(user["id"], book_id, "character"),
+              "photo": storage.get_image(user["id"], book_id, "photo")}
     for p in story.PAGES:
-        images[p["number"]] = (folder / f"page{p['number']}.png").read_bytes()
+        images[p["number"]] = storage.get_image(user["id"], book_id, f"page{p['number']}")
 
     labeled = [(label, details.get(key, "")) for key, label, _ in DETAILS]
     pdf = build_pdf(details["name"], labeled, images)
+    log.info("pdf_download user=%s book=%s bytes=%s", user["id"], book_id, len(pdf))
 
     safe_name = re.sub(r"[^A-Za-z0-9]+", "-", details["name"]).strip("-") or "My"
-    return send_file(
-        io.BytesIO(pdf),
-        mimetype="application/pdf",
-        as_attachment=True,
-        download_name=f"{safe_name}-Jack-and-the-Beanstalk.pdf",
-    )
+    return send_file(io.BytesIO(pdf), mimetype="application/pdf", as_attachment=True,
+                     download_name=f"{safe_name}-Jack-and-the-Beanstalk.pdf")
+
+
+@app.post("/book/<book_id>/delete")
+@login_required
+def delete(book_id):
+    user = current_user()
+    b = get_own_book(book_id)
+    if b["status"] == "generating":
+        flash("Please wait until the book is finished before deleting it.")
+        return redirect(url_for("book", book_id=book_id))
+    storage.delete_book(user["id"], book_id)
+    log.info("book_deleted user=%s book=%s", user["id"], book_id)
+    flash("Book deleted.")
+    return redirect(url_for("books"))
+
+
+@app.errorhandler(404)
+def not_found(_):
+    return render_template("message.html", title="Not found",
+                           message="That page doesn't exist, or it isn't yours."), 404
 
 
 @app.errorhandler(413)
 def too_large(_):
-    return form_page(error="That photo is too big (15 MB max)."), 413
+    return render_template("message.html", title="Photo too big",
+                           message="That photo is too big (15 MB max)."), 413
+
+
+@app.errorhandler(500)
+def server_error(e):
+    log.exception("server_error path=%s", request.path)
+    return render_template("message.html", title="Something went wrong",
+                           message="Sorry, something went wrong on our side. Please try again."), 500
 
 
 if __name__ == "__main__":

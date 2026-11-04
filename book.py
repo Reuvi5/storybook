@@ -4,7 +4,8 @@ Builds the downloadable PDF.
 Pages, in order:
   - Cover: Jack's character, with the title and "starring <name>"
   - The story pages: full-bleed art with the story text drawn on top
-  - About Me: the child's name and the details the uploader typed in
+  - About Me: the uploaded photo next to the cartoon, the child's name, and the
+    details the uploader typed in
 
 All text is drawn here, never by the image model, so it is always readable.
 """
@@ -86,7 +87,19 @@ def _story_page(c, page: dict, art: bytes):
     c.showPage()
 
 
-def _about_me(c, name: str, details: list, character: bytes):
+def _framed_image(c, image_bytes: bytes, box_x: float, box_y: float, box_w: float, box_h: float, ink):
+    """Draw an image as large as fits in the box, keeping its shape, bottom-centered, with a frame."""
+    w, h = Image.open(io.BytesIO(image_bytes)).size
+    scale = min(box_w / w, box_h / h)
+    dw, dh = w * scale, h * scale
+    x, y = box_x + (box_w - dw) / 2, box_y
+    c.drawImage(_jpeg(image_bytes), x, y, dw, dh)
+    c.setStrokeColor(ink)
+    c.setLineWidth(1.5)
+    c.rect(x, y, dw, dh, stroke=1, fill=0)
+
+
+def _about_me(c, name: str, details: list, character: bytes, photo: bytes = None):
     # Warm paper background
     c.setFillColor(Color(0.99, 0.96, 0.89))
     c.rect(0, 0, W, H, stroke=0, fill=1)
@@ -96,16 +109,26 @@ def _about_me(c, name: str, details: list, character: bytes):
     c.setFont(STORY_FONT, 34)
     c.drawCentredString(W / 2, H - 58, "About Me")
 
-    # The character image, scaled down (2:3 shape), with a thin frame
-    img_h = 210
-    img_w = img_h * 2 / 3
-    img_x, img_y = (W - img_w) / 2, H - 80 - img_h
-    c.drawImage(_jpeg(character), img_x, img_y, img_w, img_h)
-    c.setStrokeColor(ink)
-    c.setLineWidth(1.5)
-    c.rect(img_x, img_y, img_w, img_h, stroke=1, fill=0)
+    box_h = 200
+    box_y = H - 80 - box_h
+    if photo:
+        # The real photo and the cartoon side by side, so they can be compared.
+        box_w, gap = 160, 24
+        left_x = (W - 2 * box_w - gap) / 2
+        right_x = left_x + box_w + gap
+        _framed_image(c, photo, left_x, box_y, box_w, box_h, ink)
+        _framed_image(c, character, right_x, box_y, box_w, box_h, ink)
+        c.setFillColor(ink)
+        c.setFont("Times-Italic", 13)
+        c.drawCentredString(left_x + box_w / 2, box_y - 16, "Real me")
+        c.drawCentredString(right_x + box_w / 2, box_y - 16, "Cartoon me")
+        y = box_y - 46
+    else:
+        # Older books without a saved photo: just the cartoon.
+        _framed_image(c, character, (W - box_h * 2 / 3) / 2, box_y, box_h * 2 / 3, box_h, ink)
+        y = box_y - 34
 
-    y = img_y - 34
+    c.setFillColor(ink)
     c.setFont(STORY_FONT, 26)
     c.drawCentredString(W / 2, y, name)
     y -= 30
@@ -145,7 +168,7 @@ def build_pdf(name: str, details: list, images: dict) -> bytes:
     _cover(c, name, images["character"])
     for page in story.PAGES:
         _story_page(c, page, images[page["number"]])
-    _about_me(c, name, details, images["character"])
+    _about_me(c, name, details, images["character"], images.get("photo"))
 
     c.save()
     return buf.getvalue()

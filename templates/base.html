@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Storybook: Jack and the Beanstalk{% endblock %}</title>
+  <style>
+    :root { --ink: #3b2614; --paper: #fdf6e6; --green: #2f6b3a; --muted: #7a6650; --line: #e3d5bb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background: var(--paper); color: var(--ink); }
+    header { border-bottom: 1px solid var(--line); background: #fffaf0; }
+    .bar { max-width: 1100px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+    .brand { font-family: Georgia, "Times New Roman", serif; font-weight: bold; font-size: 19px; color: var(--ink); text-decoration: none; margin-right: auto; }
+    .bar a.nav { color: var(--ink); text-decoration: none; font-size: 15px; }
+    .bar a.nav:hover { color: var(--green); }
+    .who { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+    .who img { width: 28px; height: 28px; border-radius: 50%; }
+    .linkbtn { background: none; border: 0; color: var(--muted); font: inherit; font-size: 14px; cursor: pointer; text-decoration: underline; padding: 0; }
+    main { max-width: 1100px; margin: 0 auto; padding: 28px 16px 56px; }
+    h1 { font-family: Georgia, "Times New Roman", serif; font-size: 32px; margin: 0 0 6px; }
+    .sub { color: var(--muted); margin: 0 0 22px; font-size: 16px; }
+    .card { background: #fff; border-radius: 14px; padding: 22px; box-shadow: 0 2px 10px rgba(60,40,20,.08); }
+    .btn { display: inline-block; background: var(--green); color: #fff; text-decoration: none; border: 0; border-radius: 10px; padding: 13px 22px; font-size: 16px; cursor: pointer; font-family: inherit; }
+    .btn.secondary { background: #fff; color: var(--ink); border: 1px solid #d8ccb8; }
+    .btn.danger { background: #fff; color: #8a1c1c; border: 1px solid #e8b4b4; }
+    .btn:disabled { opacity: .65; cursor: wait; }
+    .error { background: #fde8e8; color: #8a1c1c; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    .notice { background: #eef6ee; color: #1f5a2c; padding: 12px; border-radius: 8px; margin-bottom: 16px; }
+    .testmode { background: #fff3d6; border-bottom: 1px solid #f0d9a0; text-align: center; font-size: 13px; padding: 6px; }
+    .hint { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+    {% block style %}{% endblock %}
+  </style>
+</head>
+<body>
+  {% if fake_images %}<div class="testmode">Test mode: books use placeholder images (FAKE_IMAGES=1). No OpenAI calls are made.</div>{% endif %}
+  <header>
+    <div class="bar">
+      <a class="brand" href="{{ url_for('index') }}">Jack and the Beanstalk</a>
+      {% if user %}
+        <a class="nav" href="{{ url_for('index') }}">New book</a>
+        <a class="nav" href="{{ url_for('books') }}">My books</a>
+        <span class="who">
+          {% if user.picture %}<img src="{{ user.picture }}" alt="" referrerpolicy="no-referrer">{% endif %}
+          {{ user.name }}
+          <form action="{{ url_for('auth.logout') }}" method="post" style="display:inline">
+            <button class="linkbtn">Sign out</button>
+          </form>
+        </span>
+      {% endif %}
+    </div>
+  </header>
+  <main>
+    {% with messages = get_flashed_messages() %}
+      {% for m in messages %}<div class="notice">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+  <footer style="text-align:center; font-size:13px; color:var(--muted); padding:0 16px 28px;">
+    <a href="{{ url_for('privacy') }}" style="color:var(--muted)">Privacy Policy</a>
+  </footer>
+  {% block script %}{% endblock %}
+</body>
+</html>

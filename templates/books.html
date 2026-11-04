@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block style %}
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 22px; }
+  .item { text-decoration: none; color: var(--ink); }
+  .thumb { aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden; background: #e9e0cf; box-shadow: 0 3px 12px rgba(60,40,20,.15); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; text-align: center; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .name { font-family: Georgia, serif; font-weight: bold; margin-top: 8px; }
+  .meta { font-size: 13px; color: var(--muted); }
+  .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #eee3cc; margin-left: 4px; }
+  .tag.done { background: #e2f1e4; color: #1f5a2c; }
+  .tag.bad { background: #fde8e8; color: #8a1c1c; }
+{% endblock %}
+{% block content %}
+  <h1>My books</h1>
+  <p class="sub">Every book you make is saved here.</p>
+  {% if not books %}
+    <div class="card">
+      <p style="margin-top:0">You haven't made any books yet.</p>
+      <a class="btn" href="{{ url_for('index') }}">Make your first book</a>
+    </div>
+  {% else %}
+    <div class="grid">
+      {% for b in books %}
+        <a class="item" href="{{ url_for('book', book_id=b.book_id) }}">
+          <div class="thumb">
+            {% if b.cover_url %}<img src="{{ b.cover_url }}" alt="Cover of {{ b.details.name }}'s book">{% else %}Drawing...{% endif %}
+          </div>
+          <div class="name">{{ b.details.name }}</div>
+          <div class="meta">{{ b.created_text }}
+            {% if b.status == 'done' %}<span class="tag done">Ready</span>
+            {% elif b.status == 'generating' %}<span class="tag">Drawing</span>
+            {% elif b.status == 'needs_retry' %}<span class="tag bad">Needs retry</span>
+            {% else %}<span class="tag bad">Failed</span>{% endif %}
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endblock %}

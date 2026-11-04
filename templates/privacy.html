@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy{% endblock %}
+{% block style %}
+  .policy { max-width: 720px; line-height: 1.6; }
+  .policy h2 { font-family: Georgia, serif; font-size: 20px; margin: 26px 0 6px; }
+{% endblock %}
+{% block content %}
+<div class="policy">
+  <h1>Privacy Policy</h1>
+  <p class="sub">Jack and the Beanstalk Storybook is a student project. This page explains what it stores and why.</p>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><strong>Your Google account basics</strong>, when you sign in with Google: your name, email address, profile picture, and Google's account ID. We never see your Google password.</li>
+    <li><strong>The photo you upload</strong> and the <strong>About Me details</strong> you type in (name, age, favorites, and so on).</li>
+    <li><strong>The pictures the app draws</strong> for your book.</li>
+  </ul>
+
+  <h2>How we use it</h2>
+  <ul>
+    <li>To make your storybook. Your photo is sent to OpenAI's image service to create the cartoon character, and the character is sent to draw the pages.</li>
+    <li>To save your books to your account so you can come back to them.</li>
+    <li>To keep the service running: we log events such as sign-ins and whether each picture succeeded, identified by your Google account ID, not your email.</li>
+  </ul>
+  <p>We don't sell your information, show ads, or share it with anyone other than the services needed to run the app (Google for sign-in, OpenAI for drawing, Amazon Web Services for storage, and Render for hosting).</p>
+
+  <h2>Where it's stored</h2>
+  <p>Your books, photo and pictures are stored privately in Amazon Web Services (AWS). Only you can see your books when you're signed in.</p>
+
+  <h2>Deleting your data</h2>
+  <p>Open a book and click <strong>Delete</strong> to permanently remove that book, its photo and its pictures. To remove everything, including your account record, email <a href="mailto:reuvikupchik@gmail.com">reuvikupchik@gmail.com</a>.</p>
+
+  <h2>Photos of other people</h2>
+  <p>Only upload photos of yourself, or of people who have agreed (for a child, with a parent's permission).</p>
+
+  <h2>Contact</h2>
+  <p>Questions: <a href="mailto:reuvikupchik@gmail.com">reuvikupchik@gmail.com</a></p>
+</div>
+{% endblock %}
