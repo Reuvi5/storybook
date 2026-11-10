@@ -160,7 +160,8 @@ def _about_me(c, name: str, details: list, character: bytes, photo: bytes = None
 
 
 def build_pdf(name: str, details: list, images: dict) -> bytes:
-    """name: the child's name. details: [(label, value)]. images: {"character": png, 1: png, 2: png, ...}"""
+    """Version 1 books (3 pages, made before the 20-page template). Kept so old books still download.
+    name: the child's name. details: [(label, value)]. images: {"character": png, 1: png, 2: png, ...}"""
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(W, H))
     c.setTitle(f"{story.BOOK_TITLE}, starring {name}")
@@ -170,5 +171,134 @@ def build_pdf(name: str, details: list, images: dict) -> bytes:
         _story_page(c, page, images[page["number"]])
     _about_me(c, name, details, images["character"], images.get("photo"))
 
+    c.save()
+    return buf.getvalue()
+
+
+# ===========================================================================
+# Version 2: the 20-page template (template.py), shared by both stories
+# ===========================================================================
+import template as T  # noqa: E402
+
+PAPER = Color(0.99, 0.96, 0.89)
+INK = Color(0.23, 0.15, 0.08)
+COVER_COLORS = {"jack": Color(0.18, 0.36, 0.22), "red": Color(0.55, 0.12, 0.12)}
+PANEL = {
+    "light": (Color(1, 0.98, 0.94, alpha=0.88), INK),
+    "dark": (Color(0.06, 0.05, 0.09, alpha=0.62), Color(1, 0.96, 0.86)),
+    "paper": (PAPER, INK),
+}
+
+
+def _draw_text(c, layout):
+    panel, ink = PANEL[layout["theme"]]
+    x, y, w, h = layout["rect"]
+    if layout["mode"] == "overlay":
+        c.setFillColor(panel)
+        c.roundRect(x, y, w, h, 12, stroke=0, fill=1)
+    c.setFillColor(ink)
+    size = layout["size"]
+    leading = size * T.LEADING
+    c.setFont(T.STORY_FONT, size)
+    ty = y + h - T.PAD
+    for line in layout["lines"]:
+        ty -= leading
+        c.drawCentredString(x + w / 2, ty + (leading - size) * 0.62, line)
+
+
+def _story_page_v2(c, art_png, layout, number):
+    if layout["mode"] == "band":
+        c.setFillColor(PAPER)
+        c.rect(0, 0, W, H, stroke=0, fill=1)
+        ax, ay, aw, ah = layout["art_rect"]
+        c.drawImage(_jpeg(art_png), ax, ay, aw, ah)
+    else:
+        c.drawImage(_jpeg(art_png), 0, 0, W, H)
+    _draw_text(c, layout)  # the only text on the page (no page numbers: they could land on a face)
+    c.showPage()
+
+
+def cover_geometry(title):
+    """Where everything on the cover goes (shared by the PDF and the web preview)."""
+    lines = simpleSplit(title, STORY_FONT, 34, W - 60)
+    title_bottom = H - 64 - 40 * (len(lines) - 1)
+    by = 62
+    box_h = min(450, title_bottom - 18 - by - 12)
+    box_w = box_h * 2 / 3
+    return {"lines": lines, "box": [(W - box_w) / 2, by, box_w, box_h]}
+
+
+def _cover_v2(c, title, name, hero_png, story_id):
+    c.setFillColor(COVER_COLORS.get(story_id, INK))
+    c.rect(0, 0, W, H, stroke=0, fill=1)
+    cream = Color(1, 0.96, 0.86)
+    g = cover_geometry(title)
+    c.setFillColor(cream)
+    c.setFont(STORY_FONT, 34)
+    for i, line in enumerate(g["lines"]):
+        c.drawCentredString(W / 2, H - 64 - 40 * i, line)
+    # the hero, framed, between the title and the name: no text ever sits on the art
+    bx, by, bw, bh = g["box"]
+    c.roundRect(bx - 6, by - 6, bw + 12, bh + 12, 10, stroke=0, fill=1)
+    c.drawImage(_jpeg(hero_png), bx, by, bw, bh)
+    c.setFillColor(cream)
+    c.setFont("Times-Italic", 20)
+    c.drawCentredString(W / 2, 30, f"starring {name}")
+    c.showPage()
+
+
+def _about_me_v2(c, name, details, hero_png, photo):
+    c.setFillColor(PAPER)
+    c.rect(0, 0, W, H, stroke=0, fill=1)
+    c.setFillColor(INK)
+    c.setFont(STORY_FONT, 32)
+    c.drawCentredString(W / 2, H - 54, "About Me")
+    box_w, box_h, gap = 176, 250, 20
+    top = H - 78
+    lx = (W - 2 * box_w - gap) / 2
+    rx = lx + box_w + gap
+    _framed_image(c, photo, lx, top - box_h, box_w, box_h, INK)
+    _framed_image(c, hero_png, rx, top - box_h, box_w, box_h, INK)
+    c.setFillColor(INK)
+    c.setFont("Times-Italic", 13)
+    c.drawCentredString(lx + box_w / 2, top - box_h - 16, "Real me")
+    c.drawCentredString(rx + box_w / 2, top - box_h - 16, "Cartoon me")
+    y = top - box_h - 50
+    c.setFont(STORY_FONT, 24)
+    c.drawCentredString(W / 2, y, name)
+    y -= 30
+    left, max_width = 54, W - 108
+    for label, value in details:
+        if not value:
+            continue
+        if label == "About me":
+            y -= 6
+            c.setFont(BODY_BOLD, 12.5)
+            c.drawString(left, y, "About me")
+            y -= 17
+            c.setFont(BODY_FONT, 12)
+            for line in simpleSplit(value, BODY_FONT, 12, max_width):
+                if y < 30:
+                    break
+                c.drawString(left, y, line)
+                y -= 16
+        else:
+            c.setFont(BODY_BOLD, 12.5)
+            c.drawString(left, y, f"{label}:")
+            c.setFont(BODY_FONT, 12.5)
+            c.drawString(left + c.stringWidth(f"{label}: ", BODY_BOLD, 12.5), y, value)
+            y -= 19
+    c.showPage()
+
+
+def build_story_pdf(story: dict, name: str, details: list, hero_png: bytes, photo: bytes, pages: list) -> bytes:
+    """pages: [(art_png, layout)] for the 20 story pages, in order."""
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=(W, H))
+    c.setTitle(f"{story['title']}, starring {name}")
+    _cover_v2(c, story["title"], name, hero_png, story["id"])
+    for i, (art, layout) in enumerate(pages, 1):
+        _story_page_v2(c, art, layout, i)
+    _about_me_v2(c, name, details, hero_png, photo)
     c.save()
     return buf.getvalue()

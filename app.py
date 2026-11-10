@@ -1,16 +1,19 @@
 """
-Storybook: a cartoon "Jack and the Beanstalk" starring the person in the uploaded photo.
+Storybook: a 20-page cartoon storybook starring the person in the uploaded photo.
+Two stories share one template: Jack and the Beanstalk, and Little Red Riding Hood.
 
   - Sign in with Google (auth.py).
-  - Each user's books are saved (storage.py: AWS DynamoDB + S3, or a local folder in
-    development), so they're still there on the next visit.
-  - Books are drawn in the background (generator.py); the book page shows a progress
-    bar per image while it works.
-  - The finished book downloads as one PDF (book.py).
+  - Wallet: add funds with Stripe (test mode), each book costs $0.99, refunds, full history
+    (wallet.py, ledger.py).
+  - Books are made in the background (generator.py) from pre-drawn scenes and a character bible
+    (assets.py, stories.py), checked image by image (ai.py), laid out by one template
+    (template.py) and saved as a PDF (book.py).
+  - Everything is stored in AWS (storage.py: DynamoDB + S3), so books and PDFs are still there
+    on the next visit. Locally, without AWS settings, a local_data/ folder is used.
   - Everything important is logged to the console (Render shows it under "Logs").
 
-Secrets come from environment variables (.env locally, Render's Environment tab when
-deployed), never from the code. See .env.example and SETUP.md.
+Secrets come from environment variables (.env locally, Render's Environment tab when deployed),
+never from the code. See .env.example and SETUP.md.
 """
 
 import io
@@ -26,15 +29,19 @@ from dotenv import load_dotenv
 
 load_dotenv()  # must run before the other modules read their settings
 
-from flask import Flask, abort, flash, jsonify, redirect, render_template, request, send_file, url_for
-from PIL import Image, ImageOps, UnidentifiedImageError
-from werkzeug.middleware.proxy_fix import ProxyFix
+from flask import Flask, abort, flash, jsonify, redirect, render_template, request, send_file, url_for  # noqa: E402
+from PIL import Image, ImageOps, UnidentifiedImageError  # noqa: E402
+from werkzeug.middleware.proxy_fix import ProxyFix  # noqa: E402
 
-import generator
-import story
-from auth import current_user, init_auth, login_required
-from book import build_pdf
-from storage import get_storage
+import assets  # noqa: E402
+import generator  # noqa: E402
+import ledger  # noqa: E402
+import stories  # noqa: E402
+import story as story_v1  # noqa: E402
+import wallet  # noqa: E402
+from auth import current_user, init_auth, login_required  # noqa: E402
+from book import build_pdf as build_pdf_v1, cover_geometry  # noqa: E402
+from storage import book_key, content_type, get_storage, story_key  # noqa: E402
 
 try:
     from pillow_heif import register_heif_opener  # iPhone HEIC photos (optional)
@@ -43,7 +50,7 @@ except ImportError:
     pass
 
 # ---------------------------------------------------------------------------
-# Logging: one line per event, e.g. "2026-11-02 12:00:01 INFO storybook.generator image_done user=... image=page2 seconds=21.4"
+# Logging: one line per event, e.g. "... INFO storybook.generator page_done user=... page=4 tries=1 seconds=21.4"
 # ---------------------------------------------------------------------------
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -77,9 +84,10 @@ app.config.update(
 storage = get_storage()
 app.extensions["storybook_storage"] = storage
 init_auth(app)
+app.register_blueprint(wallet.bp)
 
 # Each user can start this many books per hour (failed books don't count).
-BOOKS_PER_HOUR = int(os.environ.get("BOOKS_PER_HOUR", 2))
+BOOKS_PER_HOUR = int(os.environ.get("BOOKS_PER_HOUR", 3))
 
 # About Me fields: (form name, label, max length)
 DETAILS = [
@@ -89,6 +97,30 @@ DETAILS = [
     ("favorite_animal", "Favorite animal", 40),
     ("about", "About me", 600),
 ]
+MAX_TRIES = assets.MAX_TRIES
+
+
+def attempt_text(info: dict) -> str:
+    """The attempt count for one image, as shown on its tile (the quality loop, made visible)."""
+    status, n = info.get("status", "waiting"), int(info.get("attempt") or 0)
+    if status == "waiting":
+        return "Waiting"
+    if status in ("drawing", "retrying"):
+        return f"{'Redrawing' if n > 1 else 'Drawing'} · try {max(n, 1)} of {MAX_TRIES}"
+    if status == "checking":
+        return f"Checking · try {max(n, 1)} of {MAX_TRIES}"
+    if status == "failed":
+        return "Failed"
+    if n == 0:
+        return "Pre-drawn scene · checked"
+    if info.get("passed"):
+        return f"Passed on try {n} of {MAX_TRIES}"
+    return f"None passed · best of {n}"
+
+
+@app.template_filter("datetime")
+def _datetime(ts):
+    return time.strftime("%b %d, %Y %H:%M UTC", time.gmtime(int(ts))) if ts else ""
 
 
 # ---------------------------------------------------------------------------
@@ -125,23 +157,66 @@ def wait_minutes(user_id: str) -> int:
     return max(1, int((recent[-BOOKS_PER_HOUR] + 3600 - time.time()) // 60) + 1)
 
 
-def image_status_list(book: dict) -> list:
+def file_url(key: str) -> str:
+    """A direct (S3, temporary) link to a stored file, or the app's own route locally."""
+    return storage.blob_url(key) or url_for("blob", key=key)
+
+
+def image_list(book: dict) -> list:
+    """Every picture in the book with its state and (when finished) its thumbnail."""
+    uid = current_user()["id"]
     out = []
-    for name in generator.image_names():
+    for name in generator.image_names(book):
         info = book["images"].get(name, {})
         status = info.get("status", "waiting")
+        thumb = full = None
+        if status == "done":
+            if book.get("version", 1) >= 2:
+                thumb = file_url(book_key(uid, book["book_id"], generator.thumb_for(name)))
+                full = file_url(book_key(uid, book["book_id"], generator.file_for(name)))
+            else:
+                thumb = full = url_for("image", book_id=book["book_id"], name=name)
         out.append({
-            "name": name,
-            "label": generator.image_label(name),
-            "status": status,
-            "url": url_for("image", book_id=book["book_id"], name=name) if status == "done" else None,
+            "name": name, "label": generator.image_label(name), "status": status,
+            "state": attempt_text(info),
+            "attempt": info.get("attempt"), "thumb": thumb, "full": full,
+            "layout": info.get("layout"), "score": info.get("score"), "passed": info.get("passed"),
         })
     return out
 
 
+def story_cards() -> list:
+    cards = []
+    for s in stories.STORIES.values():
+        ready = assets.story_ready(storage, s["id"])
+        cover = file_url(story_key(s["id"], "plates/thumb-01.jpg")) if ready else None
+        cards.append({"id": s["id"], "title": s["title"], "hero": s["hero_name"], "ready": ready, "cover": cover,
+                      "blurb": s["pages"][0]["text"]})
+    return cards
+
+
+@app.context_processor
+def inject_costs():
+    def avg_cost():
+        try:
+            return generator.cost_stats(storage)
+        except Exception:  # noqa: BLE001
+            log.exception("cost_stats_failed")
+            return {"books": 0, "avg_usd": None}
+    return {"avg_cost": avg_cost}
+
+
 @app.context_processor
 def inject_user():
-    return {"user": current_user(), "fake_images": generator.FAKE_IMAGES}
+    user = current_user()
+    balance = None
+    if user:
+        try:
+            balance = storage.get_balance(user["id"])
+        except Exception:  # never break a page over the header
+            log.exception("balance_lookup_failed")
+    return {"user": user, "fake_images": generator.FAKE_IMAGES, "balance": balance,
+            "money": ledger.money, "price": ledger.BOOK_PRICE_CENTS}
 
 
 # ---------------------------------------------------------------------------
@@ -151,7 +226,8 @@ def inject_user():
 def index():
     if not current_user():
         return render_template("landing.html")
-    return render_template("index.html", details=DETAILS, values={}, books_per_hour=BOOKS_PER_HOUR)
+    return render_template("index.html", details=DETAILS, values={}, books_per_hour=BOOKS_PER_HOUR,
+                           stories=story_cards())
 
 
 @app.get("/privacy")
@@ -167,11 +243,16 @@ def make():
     values = {"name": request.form.get("name", "").strip()[:40]}
     for key, _label, max_len in DETAILS:
         values[key] = request.form.get(key, "").strip()[:max_len]
+    story_id = request.form.get("story", "")
 
     def form_error(message):
-        return render_template("index.html", details=DETAILS, values=values,
-                               books_per_hour=BOOKS_PER_HOUR, error=message)
+        return render_template("index.html", details=DETAILS, values=values, books_per_hour=BOOKS_PER_HOUR,
+                               stories=story_cards(), chosen=story_id, error=message)
 
+    if story_id not in stories.STORIES:
+        return form_error("Please choose a story.")
+    if not assets.story_ready(storage, story_id):
+        return form_error("That story isn't ready yet. Please choose the other one.")
     if not values["name"]:
         return form_error("Please enter the name.")
     upload = request.files.get("photo")
@@ -191,16 +272,12 @@ def make():
 
     now = int(time.time())
     book_id = uuid.uuid4().hex
+    if not ledger.charge_for_book(storage, user["id"], book_id, f"{stories.get_story(story_id)['title']}, starring {values['name']}"):
+        return form_error(f"Each book costs {ledger.money(ledger.BOOK_PRICE_CENTS)}, and your balance is "
+                          f"{ledger.money(storage.get_balance(user['id']))}. Add funds in your Wallet first.")
     storage.put_image(user["id"], book_id, "photo", photo)
-    storage.create_book(user["id"], {
-        "book_id": book_id,
-        "created_at": now,
-        "updated_at": now,
-        "status": "generating",
-        "details": values,
-        "images": {name: {"status": "waiting"} for name in generator.image_names()},
-    })
-    log.info("book_created user=%s book=%s", user["id"], book_id)
+    storage.create_book(user["id"], generator.new_book_record(book_id, story_id, values, now))
+    log.info("book_created user=%s book=%s story=%s", user["id"], book_id, story_id)
     generator.start_book(storage, user["id"], book_id)
     return redirect(url_for("book", book_id=book_id))
 
@@ -211,8 +288,14 @@ def books():
     user = current_user()
     items = storage.list_books(user["id"])
     for b in items:
-        b["cover_url"] = (url_for("image", book_id=b["book_id"], name="character")
-                          if b["images"].get("character", {}).get("status") == "done" else None)
+        if b.get("version", 1) >= 2:
+            done = b["images"].get("hero", {}).get("status") == "done"
+            b["cover_url"] = file_url(book_key(user["id"], b["book_id"], "thumb-hero.jpg")) if done else None
+            b["title"] = stories.get_story(b["story_id"])["title"]
+        else:
+            done = b["images"].get("character", {}).get("status") == "done"
+            b["cover_url"] = url_for("image", book_id=b["book_id"], name="character") if done else None
+            b["title"] = story_v1.BOOK_TITLE
         b["created_text"] = time.strftime("%b %d, %Y", time.gmtime(b["created_at"]))
     return render_template("books.html", books=items)
 
@@ -221,30 +304,36 @@ def books():
 @login_required
 def book(book_id):
     b = get_own_book(book_id)
+    if b.get("version", 1) < 2:
+        images = image_list(b)
+        return render_template("book_v1.html", book=b, book_id=book_id, title=story_v1.BOOK_TITLE,
+                               pages=story_v1.PAGES, details=DETAILS, values=b["details"], images=images,
+                               failed=[i for i in images if i["status"] == "failed"])
+    s = stories.get_story(b["story_id"])
+    images = image_list(b)
     return render_template(
-        "book.html",
-        book=b,
-        book_id=book_id,
-        title=story.BOOK_TITLE,
-        pages=story.PAGES,
-        details=DETAILS,
-        values=b["details"],
-        images=image_status_list(b),
-        failed=[i for i in image_status_list(b) if i["status"] == "failed"],
+        "book.html", book=b, book_id=book_id, story=s, images=images, details=DETAILS, values=b["details"],
+        stage_label=generator.STAGES.get(b.get("stage"), ""), pages=s["pages"],
+        failed=[i for i in images if i["status"] == "failed"],
+        photo_url=url_for("image", book_id=book_id, name="photo"), now_ts=int(time.time()),
+        cover=cover_geometry(s["title"]),
     )
 
 
 @app.get("/book/<book_id>/status")
 @login_required
 def status(book_id):
-    """Polled by the book page every 2 seconds while the book is being drawn."""
+    """Polled by the book page every 1.5 seconds while the book is being made."""
     b = get_own_book(book_id)
-    images = image_status_list(b)
+    images = image_list(b)
     return jsonify({
         "status": b["status"],
+        "stage": b.get("stage"),
+        "stage_label": generator.STAGES.get(b.get("stage"), ""),
         "done": sum(1 for i in images if i["status"] == "done"),
         "total": len(images),
-        "images": images,
+        "elapsed": int(time.time() - b["created_at"]),
+        "images": [{k: i[k] for k in ("name", "label", "status", "state", "thumb")} for i in images],
     })
 
 
@@ -253,19 +342,19 @@ def status(book_id):
 def retry(book_id):
     user = current_user()
     b = get_own_book(book_id)
-    if b["status"] == "needs_retry":
-        failed = [n for n in generator.image_names()[1:] if b["images"].get(n, {}).get("status") == "failed"]
-        if failed:
-            generator.start_retry(storage, user["id"], book_id, failed)
+    if b.get("version", 1) >= 2 and b["status"] == "needs_retry":
+        failed = [n for n in generator.image_names(b)[1:] if b["images"].get(n, {}).get("status") != "done"]
+        generator.start_retry(storage, user["id"], book_id, failed)
     return redirect(url_for("book", book_id=book_id))
 
 
 @app.get("/book/<book_id>/image/<name>")
 @login_required
 def image(book_id, name):
+    """The uploaded photo, and pictures of books made before the 20-page template."""
     user = current_user()
     get_own_book(book_id)
-    if name not in ["photo"] + generator.image_names():
+    if name not in ["photo"] + generator.V1_NAMES:
         abort(404)
     url = storage.image_url(user["id"], book_id, name)
     if url:  # AWS: a temporary link straight to the private S3 image
@@ -276,6 +365,22 @@ def image(book_id, name):
     return send_file(io.BytesIO(data), mimetype="image/jpeg" if name == "photo" else "image/png")
 
 
+@app.get("/file/<path:key>")
+@login_required
+def blob(key):
+    """Local development only: serves stored files (on AWS, pages link straight to S3)."""
+    user = current_user()
+    if not (key.startswith(f"books/{user['id']}/") or key.startswith("stories/")):
+        abort(404)
+    try:
+        data = storage.get_blob(key)
+    except ValueError:
+        abort(404)
+    if data is None:
+        abort(404)
+    return send_file(io.BytesIO(data), mimetype=content_type(key), max_age=3600)
+
+
 @app.get("/book/<book_id>/download")
 @login_required
 def download(book_id):
@@ -284,19 +389,32 @@ def download(book_id):
     if b["status"] != "done":
         return redirect(url_for("book", book_id=book_id))
     details = b["details"]
-
-    images = {"character": storage.get_image(user["id"], book_id, "character"),
-              "photo": storage.get_image(user["id"], book_id, "photo")}
-    for p in story.PAGES:
-        images[p["number"]] = storage.get_image(user["id"], book_id, f"page{p['number']}")
-
-    labeled = [(label, details.get(key, "")) for key, label, _ in DETAILS]
-    pdf = build_pdf(details["name"], labeled, images)
-    log.info("pdf_download user=%s book=%s bytes=%s", user["id"], book_id, len(pdf))
-
     safe_name = re.sub(r"[^A-Za-z0-9]+", "-", details["name"]).strip("-") or "My"
-    return send_file(io.BytesIO(pdf), mimetype="application/pdf", as_attachment=True,
-                     download_name=f"{safe_name}-Jack-and-the-Beanstalk.pdf")
+
+    if b.get("version", 1) < 2:
+        images = {"character": storage.get_image(user["id"], book_id, "character"),
+                  "photo": storage.get_image(user["id"], book_id, "photo")}
+        for p in story_v1.PAGES:
+            images[p["number"]] = storage.get_image(user["id"], book_id, f"page{p['number']}")
+        labeled = [(label, details.get(key, "")) for key, label, _ in DETAILS]
+        data = build_pdf_v1(details["name"], labeled, images)
+        return send_file(io.BytesIO(data), mimetype="application/pdf", as_attachment=True,
+                         download_name=f"{safe_name}-Jack-and-the-Beanstalk.pdf")
+
+    s = stories.get_story(b["story_id"])
+    filename = f"{safe_name}-{re.sub(r'[^A-Za-z0-9]+', '-', s['title']).strip('-')}.pdf"
+    key = book_key(user["id"], book_id, "book.pdf")
+    if hasattr(storage, "s3"):
+        if storage.get_blob(key) is None:  # older finished book without a saved PDF: make it now
+            generator.make_pdf(storage, user["id"], b)
+        log.info("pdf_download user=%s book=%s", user["id"], book_id)
+        return redirect(storage.s3.generate_presigned_url(
+            "get_object", ExpiresIn=300,
+            Params={"Bucket": storage.bucket, "Key": key,
+                    "ResponseContentDisposition": f'attachment; filename="{filename}"'}))
+    data = storage.get_blob(key) or generator.make_pdf(storage, user["id"], b)
+    log.info("pdf_download user=%s book=%s bytes=%s", user["id"], book_id, len(data))
+    return send_file(io.BytesIO(data), mimetype="application/pdf", as_attachment=True, download_name=filename)
 
 
 @app.post("/book/<book_id>/delete")

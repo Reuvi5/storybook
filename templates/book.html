@@ -1,124 +1,179 @@
 {% extends "base.html" %}
-{% block title %}{{ values.name }}'s Storybook{% endblock %}
+{% block title %}{{ story.title }}, starring {{ values.name }}{% endblock %}
 {% block style %}
-  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 26px; align-items: center; }
-  .warn { background: #fff3d6; border: 1px solid #f0d9a0; padding: 14px; border-radius: 10px; margin-bottom: 16px; }
+  .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+  .head h1 { margin: 0; }
+  .head .sub { margin: 6px 0 0; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .warn { background: var(--warn-soft); border: 1px solid #f0dca8; padding: 14px 16px; border-radius: 12px; margin-bottom: 20px; }
 
   /* progress */
-  .progress { max-width: 760px; }
-  .bar-outer { height: 16px; background: #eee3cc; border-radius: 10px; overflow: hidden; margin: 10px 0 6px; }
-  .bar-inner { height: 100%; width: 0; background: var(--green); border-radius: 10px; transition: width .6s ease; }
-  .count { font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; }
-  .steps { list-style: none; padding: 0; margin: 20px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
-  .step { background: #fff; border-radius: 10px; padding: 10px; box-shadow: 0 1px 6px rgba(60,40,20,.08); font-size: 13px; }
-  .step .slot { aspect-ratio: 2 / 3; border-radius: 6px; background: #f3ecdd; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 8px; color: var(--muted); }
-  .step .slot img { width: 100%; height: 100%; object-fit: cover; }
-  .step .state { color: var(--muted); }
-  .step.done .state { color: #1f5a2c; } .step.failed .state { color: #8a1c1c; }
-  .spinner { width: 26px; height: 26px; border: 3px solid #e0d4bd; border-top-color: var(--green); border-radius: 50%; animation: spin 1s linear infinite; }
+  .progress { margin-bottom: 26px; }
+  .stages { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .stage { display: flex; align-items: center; gap: 8px; padding: 7px 14px 7px 8px; border-radius: 999px; background: #f1ebdf; color: var(--muted); font-size: 14px; font-weight: 500; }
+  .stage .dot { width: 22px; height: 22px; border-radius: 50%; background: #e2d8c5; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
+  .stage.on { background: var(--accent-soft); color: var(--accent); }
+  .stage.on .dot { background: var(--accent); animation: pulse 1.4s ease-in-out infinite; }
+  .stage.done { color: var(--ink); }
+  .stage.done .dot { background: var(--accent); }
+  @keyframes pulse { 50% { opacity: .45; } }
+  .now { font-family: var(--serif); font-size: 22px; margin: 0 0 10px; }
+  .bar-outer { height: 10px; background: #ece4d4; border-radius: 99px; overflow: hidden; }
+  .bar-inner { height: 100%; width: 0; background: var(--accent); border-radius: 99px; transition: width .5s ease; }
+  .count { font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; margin-top: 8px; }
+
+  /* tiles: one per picture, filled in as each finishes */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px; }
+  .tile { font-size: 12.5px; }
+  .tile .slot { aspect-ratio: 2 / 3; border-radius: 9px; background: #efe7d7; overflow: hidden; display: flex; align-items: center; justify-content: center; color: var(--muted); position: relative; }
+  .tile .slot img { width: 100%; height: 100%; object-fit: cover; display: block; animation: fadein .5s ease; }
+  @keyframes fadein { from { opacity: 0; } }
+  .tile .name { font-weight: 600; margin-top: 6px; }
+  .tile .state { color: var(--muted); }
+  .tile.done .state { color: var(--accent); }
+  .tile.failed .state { color: var(--danger); }
+  .tile.retrying .state { color: #9a6a00; }
+  .spinner { width: 22px; height: 22px; border: 3px solid #ddd1bb; border-top-color: var(--accent); border-radius: 50%; animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* finished book preview */
-  .pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px; }
+  /* finished preview: exactly the PDF's layout */
+  .pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 22px; }
   .page { margin: 0; }
-  .frame { position: relative; aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden; background: #e9e0cf; box-shadow: 0 3px 12px rgba(60,40,20,.15); }
-  .frame > img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .text { position: absolute; left: 6%; right: 6%; padding: 10px 12px; border-radius: 10px; text-align: center; font-family: Georgia, "Times New Roman", serif; font-weight: bold; font-size: 15px; line-height: 1.3; }
-  .text.bottom { bottom: 4%; } .text.top { top: 4%; }
-  .text.light { background: rgba(255,250,240,.82); color: #3b2614; }
-  .text.dark { background: rgba(13,10,20,.55); color: #fff5dc; }
-  .text .small { display: block; font-style: italic; font-weight: normal; font-size: 13px; }
-  figcaption { margin-top: 8px; font-size: 14px; color: var(--muted); text-align: center; }
-  .missing { display: flex; align-items: center; justify-content: center; height: 100%; padding: 16px; text-align: center; color: var(--muted); font-size: 14px; }
-  .about { background: #fdf3df; border: 1px solid var(--line); padding: 7% 9%; font-size: 12px; overflow: hidden; }
-  .about h3 { font-family: Georgia, serif; text-align: center; margin: 0 0 8px; font-size: 20px; }
-  .about .name { font-family: Georgia, serif; text-align: center; font-weight: bold; font-size: 16px; margin: 6px 0 8px; }
-  .about p { margin: 3px 0; }
-  .compare { display: flex; justify-content: center; align-items: flex-end; gap: 8%; }
-  .compare figure { margin: 0; width: 40%; text-align: center; }
-  .compare img { width: 100%; height: auto; max-height: 120px; object-fit: contain; border: 1px solid var(--ink); display: block; margin: 0 auto; }
-  .compare figcaption { font-family: Georgia, serif; font-style: italic; font-size: 11px; margin-top: 3px; color: var(--ink); }
+  .frame { position: relative; aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden; background: #fcf5e3; box-shadow: var(--shadow); container-type: inline-size; }
+  .frame > img.full { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .frame > img.band { position: absolute; }
+  .txt { position: absolute; display: flex; flex-direction: column; justify-content: center; text-align: center; font-family: "Times New Roman", Times, serif; font-weight: bold; line-height: 1.28; border-radius: 2.8cqw; }
+  .txt.light { background: rgba(255,250,240,.88); color: #3b2614; }
+  .txt.dark { background: rgba(15,13,23,.62); color: #fff5dc; }
+  .txt.paper { color: #3b2614; }
+  .cover { background: var(--cover); color: #fff5dc; }
+  .cover .tl { position: absolute; left: 0; right: 0; text-align: center; font-family: "Times New Roman", Times, serif; font-weight: bold; font-size: 7.87cqw; line-height: 1; }
+  .cover img { position: absolute; object-fit: cover; outline: 1.4cqw solid #fff5dc; border-radius: .6cqw; }
+  .cover .star { position: absolute; left: 0; right: 0; bottom: 4.6%; text-align: center; font-style: italic; font-family: "Times New Roman", serif; font-size: 4.63cqw; }
+  .about .in { position: absolute; inset: 0; padding: 8cqw 9cqw; font-size: 3.1cqw; color: var(--ink); }
+  .about h3 { font-family: "Times New Roman", serif; text-align: center; margin: 0 0 3cqw; font-size: 7cqw; }
+  .compare { display: flex; justify-content: center; gap: 4cqw; }
+  .compare figure { margin: 0; width: 41%; text-align: center; }
+  .compare img { width: 100%; aspect-ratio: 2/3; object-fit: contain; background: #f4ecd9; border: .4cqw solid var(--ink); display: block; }
+  .compare figcaption { font-style: italic; font-family: "Times New Roman", serif; font-size: 3.1cqw; margin-top: 1cqw; }
+  .about .nm { font-family: "Times New Roman", serif; text-align: center; font-weight: bold; font-size: 5.4cqw; margin: 3cqw 0 2cqw; }
+  .about p { margin: .6cqw 0; }
+  figcaption.cap { margin-top: 8px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+  .q { font-size: 12px; padding: 1px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+  .q.best { background: var(--warn-soft); color: #8a5a00; }
+  .costline { font-size: 13.5px; color: var(--muted); margin: -12px 0 20px; }
+  .costline b { color: var(--ink); }
 {% endblock %}
 {% block content %}
-  <h1>{{ title }}, starring {{ values.name }}</h1>
-
-  {% if book.status == 'generating' %}
-    {# ---------------- Drawing: progress per image ---------------- #}
-    <div class="progress" id="progress">
-      <p class="sub">Drawing your book. Each picture appears here as soon as it's ready. You can leave this page and come back; the book is saved to <a href="{{ url_for('books') }}">My books</a>.</p>
-      <div class="bar-outer"><div class="bar-inner" id="bar"></div></div>
-      <div class="count"><span id="count">0 of {{ images|length }} pictures done</span><span id="elapsed"></span></div>
-      <ul class="steps" id="steps">
-        {% for img in images %}
-          <li class="step {{ img.status }}" data-name="{{ img.name }}">
-            <div class="slot">{% if img.url %}<img src="{{ img.url }}" alt="">{% elif img.status == 'drawing' %}<div class="spinner"></div>{% else %}Waiting{% endif %}</div>
-            <div><strong>{{ img.label }}</strong></div>
-            <div class="state">{{ {'waiting': 'Waiting', 'drawing': 'Drawing...', 'done': 'Done', 'failed': 'Failed'}[img.status] }}</div>
-          </li>
-        {% endfor %}
-      </ul>
+  <div class="head">
+    <div>
+      <h1>{{ story.title }}, starring {{ values.name }}</h1>
+      <p class="sub">
+        {% if book.status == 'done' %}Ready{% if book.timings and book.timings.total %} · made in {{ book.timings.total|round|int }} seconds{% endif %} · saved in <a href="{{ url_for('books') }}">My books</a>
+        {% elif book.status == 'generating' %}You can leave this page: the book keeps going and is saved in <a href="{{ url_for('books') }}">My books</a>.
+        {% endif %}
+      </p>
     </div>
-
-  {% elif book.status == 'failed' %}
-    {# ---------------- The character failed: nothing to show ---------------- #}
-    <div class="warn"><strong>Sorry, we couldn't create the character from this photo.</strong> This book doesn't count toward your hourly limit. Try again with a different photo (a clear, front-facing one works best).</div>
-    <div class="actions">
-      <a class="btn" href="{{ url_for('index') }}">Make a new book</a>
-      <form action="{{ url_for('delete', book_id=book_id) }}" method="post"><button class="btn danger">Delete this book</button></form>
-    </div>
-
-  {% else %}
-    {# ---------------- Finished (or some pages need a retry) ---------------- #}
-    {% if book.status == 'needs_retry' %}
-      <div class="warn"><strong>Some pages didn't come out ({{ failed|map(attribute='label')|join(', ') }}).</strong> Click "Try again" to redraw just those pages with the same Jack.</div>
+    {% if book.status == 'done' %}
       <div class="actions">
-        <form action="{{ url_for('retry', book_id=book_id) }}" method="post" id="retry"><button class="btn" id="retrybtn">Try again</button></form>
-      </div>
-    {% else %}
-      <p class="sub">Your book is ready. It's saved in <a href="{{ url_for('books') }}">My books</a>, so you can come back any time.</p>
-      <div class="actions">
-        <a class="btn" href="{{ url_for('download', book_id=book_id) }}">Download the book (PDF)</a>
+        <a class="btn" href="{{ url_for('download', book_id=book_id) }}">Download PDF</a>
         <form action="{{ url_for('delete', book_id=book_id) }}" method="post" onsubmit="return confirm('Delete this book for good?');"><button class="btn danger">Delete</button></form>
       </div>
     {% endif %}
+  </div>
 
+  {% if book.cost and book.status != 'generating' %}
+    {% set c = book.cost %}
+    {% set a = avg_cost() %}
+    <p class="costline">Cost to make this book: <b>{{ '$%.3f' % c.usd }}</b>{{ ' (estimated, test mode)' if c.estimated }}
+      · {{ c.image_calls }} image calls ({{ c.retries }} retr{{ 'y' if c.retries == 1 else 'ies' }}) · {{ c.analysis_calls }} quality checks
+      · price {{ money(price) }}{% if a.avg_usd is not none %} · average over {{ a.books }} book{{ '' if a.books == 1 else 's' }} {{ '$%.3f' % a.avg_usd }}{% endif %}</p>
+  {% endif %}
+
+  {% if book.status == 'failed' %}
+    <div class="warn"><strong>Sorry, we couldn't create a character from this photo.</strong> Your {{ money(price) }} has been returned to your balance. A clear, front-facing photo works best.</div>
+    <div class="actions" style="margin-bottom:24px">
+      <a class="btn" href="{{ url_for('index') }}">Try another photo</a>
+      <form action="{{ url_for('delete', book_id=book_id) }}" method="post"><button class="btn danger">Delete this book</button></form>
+    </div>
+  {% endif %}
+
+  {% if book.status in ('generating', 'needs_retry') %}
+    {% set order = ['character', 'pages', 'pdf'] %}
+    {% set cur = book.stage if book.stage in order else 'pages' %}
+    <section class="card progress" id="progress">
+      <div class="stages" id="stages">
+        {% for st, label in [('character', 'Your character'), ('pages', '20 pages'), ('pdf', 'PDF')] %}
+          <div class="stage {{ 'on' if st == cur and book.status == 'generating' else ('done' if order.index(st) < order.index(cur) else '') }}" data-stage="{{ st }}"><span class="dot">{{ loop.index }}</span>{{ label }}</div>
+        {% endfor %}
+      </div>
+      <p class="now" id="now">{{ stage_label }}{% if book.status == 'generating' %}...{% endif %}</p>
+      <div class="bar-outer"><div class="bar-inner" id="bar" style="width: {{ (100 * (images|selectattr('status', 'equalto', 'done')|list|length) / (images|length + 1))|round }}%"></div></div>
+      <div class="count"><span id="count">{{ images|selectattr('status', 'equalto', 'done')|list|length }} of {{ images|length }} pictures</span><span id="elapsed"></span></div>
+      {% if book.status == 'needs_retry' %}
+        <div class="warn" style="margin:18px 0 0"><strong>{{ failed|length }} picture{{ '' if failed|length == 1 else 's' }} didn't come out.</strong> Try again redraws only those, with the same character, at no extra cost.
+          <form action="{{ url_for('retry', book_id=book_id) }}" method="post" id="retry" style="margin-top:10px"><button class="btn" id="retrybtn">Try again</button></form>
+        </div>
+      {% endif %}
+    </section>
+
+    <div class="tiles" id="tiles">
+      {% for img in images %}
+        <div class="tile {{ img.status }}" data-name="{{ img.name }}" data-status="{{ img.status }}">
+          <div class="slot">{% if img.thumb %}<img src="{{ img.thumb }}" alt="">{% elif img.status in ('drawing', 'checking', 'retrying') %}<div class="spinner"></div>{% elif img.status == 'failed' %}✕{% endif %}</div>
+          <div class="name">{{ img.label }}</div>
+          <div class="state">{{ img.state }}</div>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% elif book.status == 'done' %}
+    {% set W, H = 432.0, 648.0 %}
     <div class="pages">
       <figure class="page">
-        <div class="frame">
-          <img src="{{ url_for('image', book_id=book_id, name='character') }}" alt="Cover: {{ values.name }} as Jack">
-          <div class="text bottom light">{{ title }}<span class="small">starring {{ values.name }}</span></div>
+        {% set bx, by, bw, bh = cover.box %}
+        <div class="frame cover" style="--cover: {{ '#2e5c38' if story.id == 'jack' else '#8c1f1f' }}">
+          {% for line in cover.lines %}<div class="tl" style="top: {{ (64 + 40 * loop.index0 - 25) / H * 100 }}%">{{ line }}</div>{% endfor %}
+          <img src="{{ images[0].full }}" alt="{{ values.name }} as {{ story.hero_name }}" style="left:{{ bx / W * 100 }}%; bottom:{{ by / H * 100 }}%; width:{{ bw / W * 100 }}%; height:{{ bh / H * 100 }}%">
+          <div class="star">starring {{ values.name }}</div>
         </div>
-        <figcaption>Cover</figcaption>
+        <figcaption class="cap"><span>Cover</span><span class="q {{ '' if images[0].passed else 'best' }}">{{ images[0].state }}</span></figcaption>
       </figure>
 
-      {% for p in pages %}
-        {% set st = book.images.get('page' ~ p.number, {}).get('status') %}
+      {% for img in images[1:] %}
+        {% set L = img.layout %}
+        {% set x, y, w, h = L.rect %}
         <figure class="page">
-          <div class="frame">
-            {% if st == 'done' %}
-              <img src="{{ url_for('image', book_id=book_id, name='page' ~ p.number) }}" alt="Page {{ p.number }}: {{ p.title }}">
-              <div class="text {{ p.text_area }} {{ p.theme }}">{{ p.text }}</div>
+          <a class="frame" href="{{ img.full }}" target="_blank" style="display:block">
+            {% if L.mode == 'band' %}
+              {% set ax, ay, aw, ah = L.art_rect %}
+              <img class="band" src="{{ img.thumb }}" alt="Page {{ loop.index }}" style="left:{{ ax / W * 100 }}%; bottom:{{ ay / H * 100 }}%; width:{{ aw / W * 100 }}%; height:{{ ah / H * 100 }}%">
             {% else %}
-              <div class="missing">Page {{ p.number }} isn't ready.</div>
+              <img class="full" src="{{ img.thumb }}" alt="Page {{ loop.index }}">
             {% endif %}
-          </div>
-          <figcaption>Page {{ p.number }}: {{ p.title }}</figcaption>
+            <div class="txt {{ L.theme }}" style="left:{{ x / W * 100 }}%; bottom:{{ y / H * 100 }}%; width:{{ w / W * 100 }}%; height:{{ h / H * 100 }}%; font-size:{{ L.size / W * 100 }}cqw">
+              {% for line in L.lines %}<div>{{ line }}</div>{% endfor %}
+            </div>
+          </a>
+          <figcaption class="cap"><span>Page {{ loop.index }}</span>
+            <span class="q {{ '' if img.passed or not img.attempt else 'best' }}" title="Quality check: up to {{ 3 }} tries">{{ img.state }}</span>
+          </figcaption>
         </figure>
       {% endfor %}
 
       <figure class="page">
-        <div class="frame about">
+        <div class="frame about"><div class="in">
           <h3>About Me</h3>
           <div class="compare">
-            <figure><img src="{{ url_for('image', book_id=book_id, name='photo') }}" alt="Real photo"><figcaption>Real me</figcaption></figure>
-            <figure><img src="{{ url_for('image', book_id=book_id, name='character') }}" alt="Cartoon"><figcaption>Cartoon me</figcaption></figure>
+            <figure><img src="{{ photo_url }}" alt="Real photo"><figcaption>Real me</figcaption></figure>
+            <figure><img src="{{ images[0].thumb }}" alt="Cartoon"><figcaption>Cartoon me</figcaption></figure>
           </div>
-          <div class="name">{{ values.name }}</div>
+          <div class="nm">{{ values.name }}</div>
           {% for key, label, _ in details %}
             {% if values.get(key) %}<p><strong>{{ label }}:</strong> {{ values.get(key) }}</p>{% endif %}
           {% endfor %}
-        </div>
-        <figcaption>About Me</figcaption>
+        </div></div>
+        <figcaption class="cap"><span>About Me</span></figcaption>
       </figure>
     </div>
   {% endif %}
@@ -131,38 +186,49 @@
   });
 
   {% if book.status == 'generating' %}
-  // Progress: ask the server every 2 seconds how each picture is doing.
   const statusUrl = "{{ url_for('status', book_id=book_id) }}";
-  const started = {{ book.created_at }} * 1000;
-  const words = { waiting: 'Waiting', drawing: 'Drawing...', done: 'Done', failed: 'Failed' };
+  const order = ['character', 'pages', 'pdf'];
+  let elapsed = {{ (now_ts - book.created_at) if now_ts is defined else 0 }};
 
-  function render(data) {
-    document.getElementById('bar').style.width = (100 * data.done / data.total) + '%';
-    document.getElementById('count').textContent = data.done + ' of ' + data.total + ' pictures done';
-    for (const img of data.images) {
-      const li = document.querySelector('.step[data-name="' + img.name + '"]');
-      if (!li || li.dataset.status === img.status) continue;
-      li.dataset.status = img.status;
-      li.className = 'step ' + img.status;
-      const slot = li.querySelector('.slot');
-      if (img.status === 'done' && img.url) slot.innerHTML = '<img src="' + img.url + '" alt="">';
-      else if (img.status === 'drawing') slot.innerHTML = '<div class="spinner"></div>';
-      else if (img.status === 'failed') slot.textContent = 'Failed';
-      li.querySelector('.state').textContent = words[img.status] || img.status;
+  function render(d) {
+    // the stage chips
+    const cur = order.includes(d.stage) ? d.stage : 'pages';
+    document.querySelectorAll('.stage').forEach(el => {
+      const i = order.indexOf(el.dataset.stage), c = order.indexOf(cur);
+      el.className = 'stage' + (i === c ? ' on' : i < c ? ' done' : '');
+    });
+    document.getElementById('now').textContent = d.stage_label + '...';
+    // the bar: pictures, plus one step for the PDF
+    const pct = 100 * (d.done + (d.stage === 'done' ? 1 : 0)) / (d.total + 1);
+    document.getElementById('bar').style.width = pct + '%';
+    document.getElementById('count').textContent = d.done + ' of ' + d.total + ' pictures';
+    elapsed = d.elapsed;
+    // the tiles: a thumbnail appears as soon as each picture is finished
+    for (const img of d.images) {
+      const el = document.querySelector('.tile[data-name="' + img.name + '"]');
+      if (!el) continue;
+      el.querySelector('.state').textContent = img.state;
+      if (el.dataset.status === img.status) continue;
+      el.dataset.status = img.status;
+      el.className = 'tile ' + img.status;
+      const slot = el.querySelector('.slot');
+      if (img.status === 'done' && img.thumb) slot.innerHTML = '<img src="' + img.thumb + '" alt="">';
+      else if (['drawing', 'checking', 'retrying'].includes(img.status)) slot.innerHTML = '<div class="spinner"></div>';
+      else if (img.status === 'failed') slot.textContent = '✕';
     }
-    if (data.status !== 'generating') setTimeout(() => location.reload(), 800);
+    if (d.status !== 'generating') setTimeout(() => location.reload(), 600);
   }
 
   async function poll() {
     try {
       const r = await fetch(statusUrl, { cache: 'no-store' });
-      if (r.ok) { const data = await r.json(); render(data); if (data.status !== 'generating') return; }
+      if (r.ok) { const d = await r.json(); render(d); if (d.status !== 'generating') return; }
     } catch (e) { /* network hiccup: try again next tick */ }
-    setTimeout(poll, 2000);
+    setTimeout(poll, 1500);
   }
   setInterval(() => {
-    const s = Math.round((Date.now() - started) / 1000);
-    document.getElementById('elapsed').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' elapsed';
+    elapsed += 1;
+    document.getElementById('elapsed').textContent = Math.floor(elapsed / 60) + ':' + String(elapsed % 60).padStart(2, '0');
   }, 1000);
   poll();
   {% endif %}

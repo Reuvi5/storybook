@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}{{ values.name }}'s Storybook{% endblock %}
+{% block style %}
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 26px; align-items: center; }
+  .warn { background: #fff3d6; border: 1px solid #f0d9a0; padding: 14px; border-radius: 10px; margin-bottom: 16px; }
+
+  /* progress */
+  .progress { max-width: 760px; }
+  .bar-outer { height: 16px; background: #eee3cc; border-radius: 10px; overflow: hidden; margin: 10px 0 6px; }
+  .bar-inner { height: 100%; width: 0; background: var(--green); border-radius: 10px; transition: width .6s ease; }
+  .count { font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; }
+  .steps { list-style: none; padding: 0; margin: 20px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .step { background: #fff; border-radius: 10px; padding: 10px; box-shadow: 0 1px 6px rgba(60,40,20,.08); font-size: 13px; }
+  .step .slot { aspect-ratio: 2 / 3; border-radius: 6px; background: #f3ecdd; display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 8px; color: var(--muted); }
+  .step .slot img { width: 100%; height: 100%; object-fit: cover; }
+  .step .state { color: var(--muted); }
+  .step.done .state { color: #1f5a2c; } .step.failed .state { color: #8a1c1c; }
+  .spinner { width: 26px; height: 26px; border: 3px solid #e0d4bd; border-top-color: var(--green); border-radius: 50%; animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* finished book preview */
+  .pages { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 22px; }
+  .page { margin: 0; }
+  .frame { position: relative; aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden; background: #e9e0cf; box-shadow: 0 3px 12px rgba(60,40,20,.15); }
+  .frame > img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .text { position: absolute; left: 6%; right: 6%; padding: 10px 12px; border-radius: 10px; text-align: center; font-family: Georgia, "Times New Roman", serif; font-weight: bold; font-size: 15px; line-height: 1.3; }
+  .text.bottom { bottom: 4%; } .text.top { top: 4%; }
+  .text.light { background: rgba(255,250,240,.82); color: #3b2614; }
+  .text.dark { background: rgba(13,10,20,.55); color: #fff5dc; }
+  .text .small { display: block; font-style: italic; font-weight: normal; font-size: 13px; }
+  figcaption { margin-top: 8px; font-size: 14px; color: var(--muted); text-align: center; }
+  .missing { display: flex; align-items: center; justify-content: center; height: 100%; padding: 16px; text-align: center; color: var(--muted); font-size: 14px; }
+  .about { background: #fdf3df; border: 1px solid var(--line); padding: 7% 9%; font-size: 12px; overflow: hidden; }
+  .about h3 { font-family: Georgia, serif; text-align: center; margin: 0 0 8px; font-size: 20px; }
+  .about .name { font-family: Georgia, serif; text-align: center; font-weight: bold; font-size: 16px; margin: 6px 0 8px; }
+  .about p { margin: 3px 0; }
+  .compare { display: flex; justify-content: center; align-items: flex-end; gap: 8%; }
+  .compare figure { margin: 0; width: 40%; text-align: center; }
+  .compare img { width: 100%; height: auto; max-height: 120px; object-fit: contain; border: 1px solid var(--ink); display: block; margin: 0 auto; }
+  .compare figcaption { font-family: Georgia, serif; font-style: italic; font-size: 11px; margin-top: 3px; color: var(--ink); }
+{% endblock %}
+{% block content %}
+  <h1>{{ title }}, starring {{ values.name }}</h1>
+
+  {% if book.status == 'generating' %}
+    {# ---------------- Drawing: progress per image ---------------- #}
+    <div class="progress" id="progress">
+      <p class="sub">Drawing your book. Each picture appears here as soon as it's ready. You can leave this page and come back; the book is saved to <a href="{{ url_for('books') }}">My books</a>.</p>
+      <div class="bar-outer"><div class="bar-inner" id="bar"></div></div>
+      <div class="count"><span id="count">0 of {{ images|length }} pictures done</span><span id="elapsed"></span></div>
+      <ul class="steps" id="steps">
+        {% for img in images %}
+          <li class="step {{ img.status }}" data-name="{{ img.name }}">
+            <div class="slot">{% if img.url %}<img src="{{ img.url }}" alt="">{% elif img.status == 'drawing' %}<div class="spinner"></div>{% else %}Waiting{% endif %}</div>
+            <div><strong>{{ img.label }}</strong></div>
+            <div class="state">{{ {'waiting': 'Waiting', 'drawing': 'Drawing...', 'done': 'Done', 'failed': 'Failed'}[img.status] }}</div>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  {% elif book.status == 'failed' %}
+    {# ---------------- The character failed: nothing to show ---------------- #}
+    <div class="warn"><strong>Sorry, we couldn't create the character from this photo.</strong> This book doesn't count toward your hourly limit. Try again with a different photo (a clear, front-facing one works best).</div>
+    <div class="actions">
+      <a class="btn" href="{{ url_for('index') }}">Make a new book</a>
+      <form action="{{ url_for('delete', book_id=book_id) }}" method="post"><button class="btn danger">Delete this book</button></form>
+    </div>
+
+  {% else %}
+    {# ---------------- Finished (or some pages need a retry) ---------------- #}
+    {% if book.status == 'needs_retry' %}
+      <div class="warn"><strong>Some pages didn't come out ({{ failed|map(attribute='label')|join(', ') }}).</strong> Click "Try again" to redraw just those pages with the same Jack.</div>
+      <div class="actions">
+        <form action="{{ url_for('retry', book_id=book_id) }}" method="post" id="retry"><button class="btn" id="retrybtn">Try again</button></form>
+      </div>
+    {% else %}
+      <p class="sub">Your book is ready. It's saved in <a href="{{ url_for('books') }}">My books</a>, so you can come back any time.</p>
+      <div class="actions">
+        <a class="btn" href="{{ url_for('download', book_id=book_id) }}">Download the book (PDF)</a>
+        <form action="{{ url_for('delete', book_id=book_id) }}" method="post" onsubmit="return confirm('Delete this book for good?');"><button class="btn danger">Delete</button></form>
+      </div>
+    {% endif %}
+
+    <div class="pages">
+      <figure class="page">
+        <div class="frame">
+          <img src="{{ url_for('image', book_id=book_id, name='character') }}" alt="Cover: {{ values.name }} as Jack">
+          <div class="text bottom light">{{ title }}<span class="small">starring {{ values.name }}</span></div>
+        </div>
+        <figcaption>Cover</figcaption>
+      </figure>
+
+      {% for p in pages %}
+        {% set st = book.images.get('page' ~ p.number, {}).get('status') %}
+        <figure class="page">
+          <div class="frame">
+            {% if st == 'done' %}
+              <img src="{{ url_for('image', book_id=book_id, name='page' ~ p.number) }}" alt="Page {{ p.number }}: {{ p.title }}">
+              <div class="text {{ p.text_area }} {{ p.theme }}">{{ p.text }}</div>
+            {% else %}
+              <div class="missing">Page {{ p.number }} isn't ready.</div>
+            {% endif %}
+          </div>
+          <figcaption>Page {{ p.number }}: {{ p.title }}</figcaption>
+        </figure>
+      {% endfor %}
+
+      <figure class="page">
+        <div class="frame about">
+          <h3>About Me</h3>
+          <div class="compare">
+            <figure><img src="{{ url_for('image', book_id=book_id, name='photo') }}" alt="Real photo"><figcaption>Real me</figcaption></figure>
+            <figure><img src="{{ url_for('image', book_id=book_id, name='character') }}" alt="Cartoon"><figcaption>Cartoon me</figcaption></figure>
+          </div>
+          <div class="name">{{ values.name }}</div>
+          {% for key, label, _ in details %}
+            {% if values.get(key) %}<p><strong>{{ label }}:</strong> {{ values.get(key) }}</p>{% endif %}
+          {% endfor %}
+        </div>
+        <figcaption>About Me</figcaption>
+      </figure>
+    </div>
+  {% endif %}
+{% endblock %}
+{% block script %}
+<script>
+  const retry = document.getElementById('retry');
+  if (retry) retry.addEventListener('submit', () => {
+    const b = document.getElementById('retrybtn'); b.disabled = true; b.textContent = 'Starting...';
+  });
+
+  {% if book.status == 'generating' %}
+  // Progress: ask the server every 2 seconds how each picture is doing.
+  const statusUrl = "{{ url_for('status', book_id=book_id) }}";
+  const started = {{ book.created_at }} * 1000;
+  const words = { waiting: 'Waiting', drawing: 'Drawing...', done: 'Done', failed: 'Failed' };
+
+  function render(data) {
+    document.getElementById('bar').style.width = (100 * data.done / data.total) + '%';
+    document.getElementById('count').textContent = data.done + ' of ' + data.total + ' pictures done';
+    for (const img of data.images) {
+      const li = document.querySelector('.step[data-name="' + img.name + '"]');
+      if (!li || li.dataset.status === img.status) continue;
+      li.dataset.status = img.status;
+      li.className = 'step ' + img.status;
+      const slot = li.querySelector('.slot');
+      if (img.status === 'done' && img.url) slot.innerHTML = '<img src="' + img.url + '" alt="">';
+      else if (img.status === 'drawing') slot.innerHTML = '<div class="spinner"></div>';
+      else if (img.status === 'failed') slot.textContent = 'Failed';
+      li.querySelector('.state').textContent = words[img.status] || img.status;
+    }
+    if (data.status !== 'generating') setTimeout(() => location.reload(), 800);
+  }
+
+  async function poll() {
+    try {
+      const r = await fetch(statusUrl, { cache: 'no-store' });
+      if (r.ok) { const data = await r.json(); render(data); if (data.status !== 'generating') return; }
+    } catch (e) { /* network hiccup: try again next tick */ }
+    setTimeout(poll, 2000);
+  }
+  setInterval(() => {
+    const s = Math.round((Date.now() - started) / 1000);
+    document.getElementById('elapsed').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' elapsed';
+  }, 1000);
+  poll();
+  {% endif %}
+</script>
+{% endblock %}

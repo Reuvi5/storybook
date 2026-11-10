@@ -19,3 +19,6 @@ venv/
 test_photos/
 outputs/
 *.pdf
+
+# Contact sheets from prepare_story.py
+prepared/

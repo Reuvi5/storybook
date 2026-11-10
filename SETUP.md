@@ -51,7 +51,7 @@ The app stores each book's record in a **DynamoDB** table and its images in a pr
 **S3** bucket. At this scale both cost effectively nothing (and fall within AWS's free tier),
 but set a billing alert anyway (step 5).
 
-Use the **us-east-1 (N. Virginia)** region for everything (top-right region menu in the AWS console).
+Use the **us-east-2 (Ohio)** region for everything (top-right region menu in the AWS console).
 
 ### 2a. S3 bucket (the images)
 1. AWS console → **S3** → **Create bucket**.
@@ -79,7 +79,7 @@ Use the **us-east-1 (N. Virginia)** region for everything (top-right region menu
        {
          "Effect": "Allow",
          "Action": ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:UpdateItem", "dynamodb:DeleteItem", "dynamodb:Query"],
-         "Resource": "arn:aws:dynamodb:us-east-1:*:table/storybook"
+         "Resource": "arn:aws:dynamodb:us-east-2:*:table/storybook"
        },
        {
          "Effect": "Allow",
@@ -103,7 +103,7 @@ Use the **us-east-1 (N. Virginia)** region for everything (top-right region menu
 ```
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
-AWS_REGION=us-east-1
+AWS_REGION=us-east-2
 DYNAMODB_TABLE=storybook
 S3_BUCKET=kupchik-storybook-images
 ```
@@ -132,6 +132,32 @@ progress bar without spending anything. A yellow bar at the top shows when it's 
 **Remove it (or set it to 0) on Render** so real users get real books.
 
 ---
+
+## 3b. Stripe (test mode)
+
+Add the class sandbox key to `.env` (and to Render's Environment tab), never anywhere else:
+```
+STRIPE_SECRET_KEY=sk_test_...
+```
+The app refuses any key that isn't a test key. To pay in test mode, use card 4242 4242 4242 4242,
+any future date, any CVC and any ZIP code.
+
+## 3c. Prepare the two stories (once)
+
+Each book uses a character bible and 20 scenes per story that are drawn ahead of time and saved to
+AWS. Make them once, from your own computer (your `.env` has the OpenAI key and the AWS settings):
+```
+python prepare_story.py all
+```
+It takes about 15–25 minutes and costs a few dollars, once. When it's done, open
+`prepared/jack-sheet.jpg` and `prepared/red-sheet.jpg`: every character and scene, with its quality
+score and the boxes where text is not allowed (red = faces, orange = characters, blue = objects).
+Redraw anything you don't like:
+```
+python prepare_story.py jack --pages 5,12      # redraw scenes
+python prepare_story.py red --chars wolf       # redraw a character (then redraw its pages)
+```
+Render reads the same AWS table and bucket, so there's nothing to upload.
 
 ## 4. Render
 
