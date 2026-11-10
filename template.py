@@ -114,7 +114,7 @@ def place_text(text: str, regions: list, preferred: str = "bottom", art_png: byt
        {"mode": "band", "art_rect": [...], "rect": [...], "size", "lines", "theme": "paper"}
 
     Every spot is tried at the largest text size that fits it without touching a face (faces are never
-    covered, full stop). A spot is allowed if the picture is plain there (measured), or if the image
+    covered: a face box blocks any spot that isn't measurably plain). A spot is allowed if the picture is plain there (measured), or if the image
     inspector says it's clear and the picture isn't busy there. Of the allowed spots, the plainest wins,
     with a strong preference for the scene's planned spot, full-width panels and large text. If none is
     allowed, the plainest face-free full-width spot is used if it isn't busy; only if every spot is busy
@@ -126,9 +126,13 @@ def place_text(text: str, regions: list, preferred: str = "bottom", art_png: byt
     for rank, zone in enumerate(order):
         for size in FONT_SIZES:
             placed = _panel(zone, text, size)
-            if not placed or any(_overlaps(placed[0], f) for f in faces):
+            if not placed:
                 continue
             busy = measure(placed[0])
+            # A face box blocks the spot, unless the picture there is measurably plain: a real face
+            # (eyes, mouth, outlines) always measures busy, so a "face" in empty sky is a false box.
+            if busy >= PLAIN and any(_overlaps(placed[0], f) for f in faces):
+                continue
             half = "_" in zone
             # Lower is better: plain picture, the scene's planned spot, full width, big text.
             score = busy + 2.0 * rank + (8 if half else 0) - (size - FONT_SIZES[-1]) * 0.8
