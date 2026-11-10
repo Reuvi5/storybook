@@ -10,9 +10,14 @@ Pages, in order:
 All text is drawn here, never by the image model, so it is always readable.
 """
 
+import hashlib
 import io
+import os
+import tempfile
+import threading
 
 from PIL import Image
+from reportlab import rl_config
 from reportlab.lib.colors import Color
 from reportlab.lib.utils import ImageReader, simpleSplit
 from reportlab.pdfgen import canvas
@@ -33,8 +38,35 @@ THEMES = {
 }
 
 
-def _jpeg(png_bytes: bytes) -> ImageReader:
-    """Convert a PNG to JPEG before embedding, which keeps the PDF much smaller."""
+# Store pictures as binary in the PDF. reportlab's default (ASCII85 text encoding) runs in plain Python
+# when its C speedups aren't installed: minutes per book on a small server.
+rl_config.useA85 = 0
+
+_tmp = threading.local()
+
+
+def _jpeg(png_bytes: bytes):
+    """What to hand reportlab for one picture.
+
+    A JPEG goes in as a FILE PATH: that's the only way reportlab embeds the JPEG data as it is. Given
+    bytes or a PIL image, it decodes every picture into raw pixels (about 5 MB each) and zip-compresses
+    them, which took minutes and ran out of memory on Render's small server."""
+    if png_bytes[:3] != b"\xff\xd8\xff":  # a PNG (older books): convert once
+        img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
+        buf = io.BytesIO()
+        img.save(buf, format="JPEG", quality=88)
+        png_bytes = buf.getvalue()
+    folder = getattr(_tmp, "dir", None)
+    if folder is None:  # not inside a build: fall back to the slow way
+        return ImageReader(io.BytesIO(png_bytes))
+    path = os.path.join(folder, hashlib.sha1(png_bytes).hexdigest() + ".jpg")
+    if not os.path.exists(path):
+        with open(path, "wb") as f:
+            f.write(png_bytes)
+    return path
+
+
+def _old_jpeg(png_bytes: bytes) -> ImageReader:
     img = Image.open(io.BytesIO(png_bytes)).convert("RGB")
     buf = io.BytesIO()
     img.save(buf, format="JPEG", quality=88)
@@ -159,7 +191,24 @@ def _about_me(c, name: str, details: list, character: bytes, photo: bytes = None
     c.showPage()
 
 
+class _jpeg_folder:
+    """Temporary folder for the JPEG files of one PDF build (deleted afterwards)."""
+
+    def __enter__(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        _tmp.dir = self.tmp.name
+
+    def __exit__(self, *exc):
+        _tmp.dir = None
+        self.tmp.cleanup()
+
+
 def build_pdf(name: str, details: list, images: dict) -> bytes:
+    with _jpeg_folder():
+        return _build_pdf(name, details, images)
+
+
+def _build_pdf(name: str, details: list, images: dict) -> bytes:
     """Version 1 books (3 pages, made before the 20-page template). Kept so old books still download.
     name: the child's name. details: [(label, value)]. images: {"character": png, 1: png, 2: png, ...}"""
     buf = io.BytesIO()
@@ -293,6 +342,11 @@ def _about_me_v2(c, name, details, hero_png, photo):
 
 def build_story_pdf(story: dict, name: str, details: list, hero_png: bytes, photo: bytes, pages: list) -> bytes:
     """pages: [(art_png, layout)] for the 20 story pages, in order."""
+    with _jpeg_folder():
+        return _build_story_pdf(story, name, details, hero_png, photo, pages)
+
+
+def _build_story_pdf(story, name, details, hero_png, photo, pages):
     buf = io.BytesIO()
     c = canvas.Canvas(buf, pagesize=(W, H))
     c.setTitle(f"{story['title']}, starring {name}")

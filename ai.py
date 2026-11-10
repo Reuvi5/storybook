@@ -31,6 +31,11 @@ FAKE = os.environ.get("FAKE_IMAGES") == "1"
 
 _client = None
 
+# Picture processing (decode, shrink, encode) is memory-hungry. The 20 pages wait on OpenAI in parallel,
+# but only this many may process pictures at the same moment, so memory stays small (Render: 512 MB).
+import threading as _threading
+IMAGE_WORK = _threading.BoundedSemaphore(int(os.environ.get("IMAGE_WORK_SLOTS", 3)))
+
 # Prices in US dollars per 1M tokens (override in .env if OpenAI changes them).
 #   gpt-image-2: text in $5, image in $8, image out $30   gpt-5-mini: in $0.25, out $2
 PRICE = {
@@ -100,23 +105,30 @@ def client():
 # ---------------------------------------------------------------------------
 # Drawing
 # ---------------------------------------------------------------------------
-def draw(prompt: str, refs=(), quality: str = "low", label: str = "", meter: Meter = None) -> bytes:
-    """refs: [(file name, bytes, mime)]. Returns PNG bytes. Adds its cost to `meter`."""
+def draw(prompt: str, refs=(), quality: str = "low", label: str = "", meter: Meter = None, fmt: str = "png") -> bytes:
+    """refs: [(file name, bytes, mime)]. Returns image bytes (PNG, or JPEG with fmt="jpeg": book pages use
+    JPEG so the server never has to decode and re-encode them). Adds its cost to `meter`."""
     if FAKE:
         if meter:
             meter.add("image", _image_cost(None, refs, quality))  # test mode: what it WOULD cost
-        return _placeholder(label or prompt[:40])
+        return _placeholder(label or prompt[:40], fmt)
+    extra = {"output_format": "jpeg", "output_compression": 90} if fmt == "jpeg" else {}
     if refs:
-        result = client().images.edit(model=IMAGE_MODEL, image=list(refs), prompt=prompt, size=SIZE, quality=quality)
+        result = client().images.edit(model=IMAGE_MODEL, image=list(refs), prompt=prompt, size=SIZE, quality=quality, **extra)
     else:
-        result = client().images.generate(model=IMAGE_MODEL, prompt=prompt, size=SIZE, quality=quality)
+        result = client().images.generate(model=IMAGE_MODEL, prompt=prompt, size=SIZE, quality=quality, **extra)
     if meter:
         meter.add("image", _image_cost(getattr(result, "usage", None), refs, quality))
     return base64.b64decode(result.data[0].b64_json)
 
 
-def _placeholder(label: str) -> bytes:
+def _placeholder(label: str, fmt: str = "png") -> bytes:
     time.sleep(random.uniform(1.5, 4))
+    with IMAGE_WORK:
+        return _draw_placeholder(label, fmt)
+
+
+def _draw_placeholder(label, fmt):
     seed = int(hashlib.md5(label.encode()).hexdigest()[:6], 16)
     rnd = random.Random(seed)
     img = Image.new("RGB", (1024, 1536), (rnd.randint(90, 200), rnd.randint(110, 200), rnd.randint(90, 210)))
@@ -132,20 +144,37 @@ def _placeholder(label: str) -> bytes:
     d.text((512, 120), "TEST IMAGE", fill="white", anchor="mm", font=font)
     d.text((512, 180), label[:34], fill="white", anchor="mm", font=font)
     buf = io.BytesIO()
-    img.save(buf, "PNG")
+    img.save(buf, "JPEG" if fmt == "jpeg" else "PNG", **({"quality": 90} if fmt == "jpeg" else {}))
     return buf.getvalue()
+
+
+def open_small(data: bytes, max_side: int):
+    with IMAGE_WORK:
+        return _open_small(data, max_side)
+
+
+def _open_small(data: bytes, max_side: int):
+    """Open an image already shrunk to about max_side. For JPEGs the decoder does the shrinking
+    (draft mode), which is many times faster than decoding the full picture: it matters on a small server."""
+    img = Image.open(io.BytesIO(data))
+    if img.format == "JPEG":
+        img.draft("RGB", (max_side, max_side))
+    img = img.convert("RGB")
+    img.thumbnail((max_side, max_side))
+    return img
 
 
 # ---------------------------------------------------------------------------
 # Inspecting
 # ---------------------------------------------------------------------------
 def _data_url(png: bytes, max_side: int = 768, grid: bool = False) -> str:
-    img = Image.open(io.BytesIO(png)).convert("RGB")
-    img.thumbnail((max_side, max_side))
-    if grid:
-        img = _with_grid(img)
-    buf = io.BytesIO()
-    img.save(buf, "JPEG", quality=85)
+    with IMAGE_WORK:
+        img = _open_small(png, max_side)
+        if grid:
+            img = _with_grid(img)
+        buf = io.BytesIO()
+        img.save(buf, "JPEG", quality=85)
+        del img
     return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
@@ -323,7 +352,7 @@ def _clean_regions(regions) -> list:
 def _fake_inspection(png: bytes) -> dict:
     """Test mode: find the placeholder's drawn "character" and pass most of the time."""
     time.sleep(random.uniform(0.3, 1.0))
-    img = Image.open(io.BytesIO(png)).convert("RGB").resize((100, 150))
+    img = open_small(png, 150).resize((100, 150))
     px = img.load()
     xs, ys = [], []
     for y in range(150):

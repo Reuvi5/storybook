@@ -32,8 +32,19 @@ def pk(story_id):
     return f"STORY#{story_id}"
 
 
-def jpeg(png: bytes, max_side: int = None, quality: int = 90) -> bytes:
-    img = Image.open(io.BytesIO(png)).convert("RGB")
+def jpeg(data: bytes, max_side: int = None, quality: int = 90) -> bytes:
+    """JPEG bytes, at most max_side. A JPEG that's already small enough is returned untouched."""
+    with ai.IMAGE_WORK:
+        return _jpeg(data, max_side, quality)
+
+
+def _jpeg(data, max_side, quality):
+    img = Image.open(io.BytesIO(data))
+    if img.format == "JPEG" and (not max_side or max(img.size) <= max_side):
+        return data
+    if img.format == "JPEG" and max_side:
+        img.draft("RGB", (max_side, max_side))  # shrink while decoding: much less CPU
+    img = img.convert("RGB")
     if max_side:
         img.thumbnail((max_side, max_side))
     buf = io.BytesIO()
@@ -73,9 +84,9 @@ def draw_checked(make, check, label, tries=MAX_TRIES, on_attempt=None, errors=No
         if result.get("passed"):
             break
     if not attempts:
-        return None, None, 0
+        return None, None, n
     best = best_of(attempts)
-    return best["png"], best["check"], len(attempts)
+    return best["png"], best["check"], n  # n = drawings tried (a blocked or failed drawing still counts)
 
 
 # ---------------------------------------------------------------------------

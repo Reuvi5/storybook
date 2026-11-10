@@ -132,7 +132,16 @@ def _theme(art_png, rect):
     """Light panel with dark text over light art; dark panel with light text over dark art."""
     if not art_png:
         return "light"
-    img = Image.open(io.BytesIO(art_png)).convert("L")
+    import ai
+    with ai.IMAGE_WORK:
+        return _theme_of(art_png, rect)
+
+
+def _theme_of(art_png, rect):
+    img = Image.open(io.BytesIO(art_png))
+    if img.format == "JPEG":
+        img.draft("L", (256, 384))
+    img = img.convert("L")
     iw, ih = img.size
     x0, y0, x1, y1 = rect
     crop = img.crop((int(x0 / W * iw), int((H - y1) / H * ih), int(x1 / W * iw), int((H - y0) / H * ih)))

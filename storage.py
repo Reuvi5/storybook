@@ -295,7 +295,8 @@ class AwsStorage:
         import boto3
         from botocore.config import Config
 
-        self.table = boto3.resource("dynamodb", region_name=region).Table(table_name)
+        pool = Config(max_pool_connections=40)  # 20 pages run at once; the default of 10 makes them queue
+        self.table = boto3.resource("dynamodb", region_name=region, config=pool).Table(table_name)
         # Use the bucket's own regional address (e.g. s3.us-east-2.amazonaws.com). Otherwise the
         # temporary image links point at the global S3 address, which rejects them for buckets
         # outside us-east-1, and pictures don't show on the page.
@@ -303,7 +304,7 @@ class AwsStorage:
             "s3",
             region_name=region,
             endpoint_url=f"https://s3.{region}.amazonaws.com",
-            config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}),
+            config=Config(signature_version="s3v4", s3={"addressing_style": "virtual"}, max_pool_connections=40),
         )
         self.bucket = bucket
 

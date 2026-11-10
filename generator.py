@@ -35,7 +35,7 @@ FAKE_IMAGES = ai.FAKE
 QUALITY = "low"                      # per-book images: fixed, not shown to users
 PAGE_QUALITY = os.environ.get("PAGE_QUALITY", QUALITY)   # "medium" holds the face better, but is slower
 CONCURRENCY = int(os.environ.get("IMAGE_CONCURRENCY", 20))
-STALLED_AFTER_SECONDS = 10 * 60      # a book stuck this long (server restarted) is marked for retry
+STALLED_AFTER_SECONDS = 4 * 60       # a book stuck this long (server restarted) is marked for retry
 
 STAGES = {
     "character": "Creating your character",
@@ -166,7 +166,8 @@ def _pipeline(storage, user_id, book_id, only_pages, meter):
         storage.update_book(user_id, book_id, stage="pages")
         numbers = [int(n[4:]) for n in only_pages] if only_pages is not None else range(1, stories.PAGE_COUNT + 1)
         with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
-            list(pool.map(lambda n: _make_page(storage, user_id, book_id, s, n, hero, meter), numbers))
+            refs = _hero_refs(storage, user_id, book_id, hero)  # made once, shared by all 20 pages
+            list(pool.map(lambda n: _make_page(storage, user_id, book_id, s, n, refs, meter), numbers))
         timings["pages"] = round(time.time() - t, 1)
 
         book = storage.get_book(user_id, book_id)
@@ -198,7 +199,7 @@ def _progress(storage, user_id, book_id, name):
 def _make_hero(storage, user_id, book_id, s, meter):
     photo = storage.get_image(user_id, book_id, "photo")
     png, check, tries = assets.draw_checked(
-        lambda: ai.draw(stories.hero_prompt(s), [("photo.jpg", photo, "image/jpeg")], QUALITY, "Your character", meter),
+        lambda: ai.draw(stories.hero_prompt(s), [("photo.jpg", photo, "image/jpeg")], QUALITY, "Your character", meter, fmt="jpeg"),
         lambda img: ai.inspect_hero(img, photo, meter),
         f"{book_id}/hero",
         on_attempt=_progress(storage, user_id, book_id, "hero"),
@@ -219,6 +220,11 @@ def _make_hero(storage, user_id, book_id, s, meter):
 def face_closeup(png: bytes, box=None) -> bytes:
     """A square, enlarged crop of the hero's face (box from the inspector, 0-1000 coords). Sent with every
     page so the model sees the face in detail, not just as a small part of the full-body design."""
+    with ai.IMAGE_WORK:
+        return _face_closeup(png, box)
+
+
+def _face_closeup(png, box):
     from PIL import Image
     import io
     img = Image.open(io.BytesIO(png)).convert("RGB")
@@ -237,7 +243,13 @@ def face_closeup(png: bytes, box=None) -> bytes:
     return buf.getvalue()
 
 
-def _make_page(storage, user_id, book_id, s, number, hero, meter):
+def _hero_refs(storage, user_id, book_id, hero):
+    return {"full": hero,
+            "jpg": assets.jpeg(hero, 1024),
+            "face": storage.get_blob(book_key(user_id, book_id, "hero-face.jpg")) or face_closeup(hero, None)}
+
+
+def _make_page(storage, user_id, book_id, s, number, refs, meter):
     name = page_name(number)
     page = s["pages"][number - 1]
     t = time.time()
@@ -248,15 +260,13 @@ def _make_page(storage, user_id, book_id, s, number, hero, meter):
             art, tries = plate["jpeg_bytes"], 0
             check = {"score": plate["score"], "passed": plate["passed"], "problems": plate["problems"], "regions": []}  # zones come from the plate below
         else:
-            hero_jpg = assets.jpeg(hero, 1024)
-            face_jpg = storage.get_blob(book_key(user_id, book_id, "hero-face.jpg")) or face_closeup(hero, None)
             cast_note = ("Characters who should appear: " + "; ".join(s["bible"][c] for c in page["cast"])) if page["cast"] else ""
             png, check, tries = assets.draw_checked(
                 lambda: ai.draw(stories.swap_prompt(s, page),
-                                [("scene.jpg", plate["jpeg_bytes"], "image/jpeg"), ("hero.jpg", hero_jpg, "image/jpeg"),
-                                 ("face.jpg", face_jpg, "image/jpeg")],
-                                PAGE_QUALITY, f"{s['id']} page {number}", meter),
-                lambda img: ai.inspect_page(img, page["scene"], page["text"], hero, cast_note, meter=meter),
+                                [("scene.jpg", plate["jpeg_bytes"], "image/jpeg"), ("hero.jpg", refs["jpg"], "image/jpeg"),
+                                 ("face.jpg", refs["face"], "image/jpeg")],
+                                PAGE_QUALITY, f"{s['id']} page {number}", meter, fmt="jpeg"),
+                lambda img: ai.inspect_page(img, page["scene"], page["text"], refs["jpg"], cast_note, meter=meter),
                 f"{book_id}/{name}",
                 on_attempt=_progress(storage, user_id, book_id, name),
             )
