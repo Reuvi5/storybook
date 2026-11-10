@@ -69,6 +69,15 @@ class Meter:
     def usd(self):
         return self.image_usd + self.analysis_usd
 
+    def take(self) -> dict:
+        """What was spent since the last take(), so costs can be saved as the book goes (a crash then
+        loses at most one stage's worth, not the whole book)."""
+        with self.lock:
+            now = self.summary()
+            last = getattr(self, "_last", {k: 0 for k in now})
+            self._last = now
+            return {k: (round(now[k] - last[k], 5) if isinstance(now[k], float) else now[k] - last[k]) for k in now}
+
     def summary(self) -> dict:
         return {"usd": round(self.usd, 5), "image_usd": round(self.image_usd, 5), "analysis_usd": round(self.analysis_usd, 5),
                 "image_calls": self.image_calls, "analysis_calls": self.analysis_calls}

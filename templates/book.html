@@ -69,7 +69,7 @@
     <div>
       <h1>{{ story.title }}, starring {{ values.name }}</h1>
       <p class="sub">
-        {% if book.status == 'done' %}Ready{% if book.timings and book.timings.total %} · made in {{ book.timings.total|round|int }} seconds{% endif %} · saved in <a href="{{ url_for('books') }}">My books</a>
+        {% if book.status == 'done' %}Ready{% if book.timings and book.timings.total and not book.timings.retry %} · made in {{ book.timings.total|round|int }} seconds{% elif book.timings and book.timings.retry %} · finished after a retry{% endif %} · saved in <a href="{{ url_for('books') }}">My books</a>
         {% elif book.status == 'generating' %}You can leave this page: the book keeps going and is saved in <a href="{{ url_for('books') }}">My books</a>.
         {% endif %}
       </p>
@@ -91,7 +91,13 @@
   {% endif %}
 
   {% if book.status == 'failed' %}
-    <div class="warn"><strong>Sorry, we couldn't create a character from this photo.</strong> Your {{ money(price) }} has been returned to your balance. A clear, front-facing photo works best.</div>
+    {% if book.failure == 'service' %}
+      <div class="warn"><strong>Our picture service isn't available right now, so this book couldn't be made.</strong> It wasn't your photo. Your {{ money(price) }} has been returned to your balance. Please try again in a little while.</div>
+    {% elif book.failure == 'blocked' %}
+      <div class="warn"><strong>The image service's safety filter turned this photo down.</strong> Your {{ money(price) }} has been returned to your balance. Try a different photo: one clear face, front-facing, ordinary clothes.</div>
+    {% else %}
+      <div class="warn"><strong>Sorry, we couldn't create a character from this photo.</strong> Your {{ money(price) }} has been returned to your balance. A clear, front-facing photo works best.</div>
+    {% endif %}
     <div class="actions" style="margin-bottom:24px">
       <a class="btn" href="{{ url_for('index') }}">Try another photo</a>
       <form action="{{ url_for('delete', book_id=book_id) }}" method="post"><button class="btn danger">Delete this book</button></form>
@@ -111,7 +117,9 @@
       <div class="bar-outer"><div class="bar-inner" id="bar" style="width: {{ (100 * (images|selectattr('status', 'equalto', 'done')|list|length) / (images|length + 1))|round }}%"></div></div>
       <div class="count"><span id="count">{{ images|selectattr('status', 'equalto', 'done')|list|length }} of {{ images|length }} pictures</span><span id="elapsed"></span></div>
       {% if book.status == 'needs_retry' %}
-        <div class="warn" style="margin:18px 0 0"><strong>{{ failed|length }} picture{{ '' if failed|length == 1 else 's' }} didn't come out.</strong> Try again redraws only those, with the same character, at no extra cost.
+        <div class="warn" style="margin:18px 0 0">
+          {% if failed %}<strong>{{ failed|length }} picture{{ '' if failed|length == 1 else 's' }} didn't come out.</strong> Try again redraws only those, with the same character, at no extra cost.
+          {% else %}<strong>All the pictures are done, but the PDF didn't finish</strong> (the server restarted). Try again builds it, at no extra cost.{% endif %}
           <form action="{{ url_for('retry', book_id=book_id) }}" method="post" id="retry" style="margin-top:10px"><button class="btn" id="retrybtn">Try again</button></form>
         </div>
       {% endif %}

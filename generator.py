@@ -103,7 +103,7 @@ def start_retry(storage, user_id, book_id, names):
 # The pipeline
 # ---------------------------------------------------------------------------
 def cost_stats(storage) -> dict:
-    """Average API cost per book, over every book ever made (from a running total in the database)."""
+    """Average API cost per book, over every book that used the API (a running total in the database)."""
     rec = storage.get_record("STATS", "COSTS") or {}
     books = int(rec.get("books", 0))
     usd = rec.get("usd_micro", 0) / 1e6
@@ -112,21 +112,27 @@ def cost_stats(storage) -> dict:
             "retries": int(rec.get("retries", 0))}
 
 
-def _record_cost(storage, user_id, book_id, meter, first_run):
-    """Save what this run cost on the book (added to earlier runs) and to the all-books total."""
-    book = storage.get_book(user_id, book_id)
-    retries = sum(max(0, int(i.get("attempt") or 0) - 1) for i in book["images"].values())
-    old = book.get("cost") or {}
-    m = meter.summary()
-    cost = {k: round(old.get(k, 0) + m[k], 5) if isinstance(m[k], float) else old.get(k, 0) + m[k] for k in m}
-    cost["retries"] = retries
-    cost["estimated"] = FAKE_IMAGES
-    storage.update_book(user_id, book_id, cost=cost)
-    storage.add_counters("STATS", "COSTS", books=1 if first_run else 0, usd_micro=int(round(m["usd"] * 1e6)),
-                         image_calls=m["image_calls"], analysis_calls=m["analysis_calls"],
-                         retries=max(0, retries - int(old.get("retries", 0))))
-    log.info("book_cost user=%s book=%s usd=%.4f image_calls=%s analysis_calls=%s retries=%s price=0.99",
-             user_id, book_id, m["usd"], m["image_calls"], m["analysis_calls"], retries)
+def _save_cost(storage, user_id, book_id, meter):
+    """Add what was spent since the last save to the book and to the all-books total. Called after each
+    stage, so a server restart can't lose the whole book's cost. A book counts toward the average once it
+    has actually used the API (a book that failed before any call doesn't drag the average down)."""
+    try:
+        d = meter.take()
+        if not d["image_calls"] and not d["analysis_calls"]:
+            return
+        book = storage.get_book(user_id, book_id)
+        retries = sum(max(0, int(i.get("attempt") or 0) - 1) for i in book["images"].values())
+        old = book.get("cost") or {}
+        cost = {k: (round(old.get(k, 0) + d[k], 5) if isinstance(d[k], float) else old.get(k, 0) + d[k]) for k in d}
+        cost.update(retries=retries, estimated=FAKE_IMAGES, counted=True)
+        storage.update_book(user_id, book_id, cost=cost)
+        storage.add_counters("STATS", "COSTS", books=0 if old.get("counted") else 1, usd_micro=int(round(d["usd"] * 1e6)),
+                             image_calls=d["image_calls"], analysis_calls=d["analysis_calls"],
+                             retries=max(0, retries - int(old.get("retries", 0))))
+        log.info("book_cost user=%s book=%s usd_so_far=%.4f image_calls=%s analysis_calls=%s retries=%s price=0.99",
+                 user_id, book_id, cost["usd"], cost["image_calls"], cost["analysis_calls"], retries)
+    except Exception:  # noqa: BLE001 - never lose a book over bookkeeping
+        log.exception("cost_record_failed user=%s book=%s", user_id, book_id)
 
 
 def _run(storage, user_id, book_id, only_pages):
@@ -134,10 +140,7 @@ def _run(storage, user_id, book_id, only_pages):
     try:
         _pipeline(storage, user_id, book_id, only_pages, meter)
     finally:
-        try:
-            _record_cost(storage, user_id, book_id, meter, first_run=only_pages is None)
-        except Exception:  # noqa: BLE001 - never lose a book over bookkeeping
-            log.exception("cost_record_failed user=%s book=%s", user_id, book_id)
+        _save_cost(storage, user_id, book_id, meter)
 
 
 def _pipeline(storage, user_id, book_id, only_pages, meter):
@@ -153,10 +156,11 @@ def _pipeline(storage, user_id, book_id, only_pages, meter):
         else:
             t = time.time()
             storage.update_book(user_id, book_id, stage="character")
-            hero = _make_hero(storage, user_id, book_id, s, meter)
+            hero, why = _make_hero(storage, user_id, book_id, s, meter)
+            _save_cost(storage, user_id, book_id, meter)
             timings["character"] = round(time.time() - t, 1)
             if hero is None:
-                storage.update_book(user_id, book_id, status="failed", stage="failed", timings=timings)
+                storage.update_book(user_id, book_id, status="failed", stage="failed", timings=timings, failure=why)
                 ledger.refund_failed_book(storage, user_id, book_id)
                 log.info("book_finished user=%s book=%s status=failed seconds=%.1f", user_id, book_id, time.time() - started)
                 return
@@ -169,6 +173,7 @@ def _pipeline(storage, user_id, book_id, only_pages, meter):
             refs = _hero_refs(storage, user_id, book_id, hero)  # made once, shared by all 20 pages
             list(pool.map(lambda n: _make_page(storage, user_id, book_id, s, n, refs, meter), numbers))
         timings["pages"] = round(time.time() - t, 1)
+        _save_cost(storage, user_id, book_id, meter)
 
         book = storage.get_book(user_id, book_id)
         if any(book["images"][page_name(n)]["status"] != "done" for n in range(1, stories.PAGE_COUNT + 1)):
@@ -181,7 +186,10 @@ def _pipeline(storage, user_id, book_id, only_pages, meter):
         storage.update_book(user_id, book_id, stage="pdf")
         make_pdf(storage, user_id, book)
         timings["pdf"] = round(time.time() - t, 1)
-        timings["total"] = round(time.time() - started, 1)
+        if only_pages is None:
+            timings["total"] = round(time.time() - book["created_at"], 1)  # from the moment of upload
+        else:
+            timings["retry"] = round(time.time() - started, 1)  # a retry never pretends to be the whole book
         storage.update_book(user_id, book_id, status="done", stage="done", timings=timings, finished_at=int(time.time()))
         log.info("book_finished user=%s book=%s status=done seconds=%.1f timings=%s", user_id, book_id, time.time() - started, timings)
     except Exception:
@@ -196,17 +204,33 @@ def _progress(storage, user_id, book_id, name):
     return on_attempt
 
 
+def failure_reason(errors: list) -> str:
+    """Why drawing failed, in words the book page can act on: "blocked" (OpenAI's safety filter turned
+    the photo down), "service" (OpenAI unavailable: no credits, rate limit, outage), or "photo"."""
+    text = " ".join(errors).lower()
+    if "moderation" in text or "safety system" in text:
+        return "blocked"
+    if errors:
+        return "service"
+    return "photo"
+
+
 def _make_hero(storage, user_id, book_id, s, meter):
+    """Returns (picture, None), or (None, why it failed)."""
     photo = storage.get_image(user_id, book_id, "photo")
+    errors = []
     png, check, tries = assets.draw_checked(
         lambda: ai.draw(stories.hero_prompt(s), [("photo.jpg", photo, "image/jpeg")], QUALITY, "Your character", meter, fmt="jpeg"),
         lambda img: ai.inspect_hero(img, photo, meter),
         f"{book_id}/hero",
         on_attempt=_progress(storage, user_id, book_id, "hero"),
+        errors=errors,
     )
     if png is None:
-        storage.set_image_status(user_id, book_id, "hero", "failed", error="The character couldn't be drawn")
-        return None
+        why = failure_reason(errors)
+        storage.set_image_status(user_id, book_id, "hero", "failed", error=(errors[-1] if errors else "")[:200], attempt=tries)
+        log.error("hero_failed user=%s book=%s reason=%s", user_id, book_id, why)
+        return None, why
     storage.put_blob(book_key(user_id, book_id, "hero.png"), png)
     face = (next((r["box"] for r in check.get("regions", []) if r.get("kind") == "face"), None))
     storage.put_blob(book_key(user_id, book_id, "hero-face.jpg"), face_closeup(png, face))
@@ -214,7 +238,7 @@ def _make_hero(storage, user_id, book_id, s, meter):
     storage.set_image_status(user_id, book_id, "hero", "done", attempt=tries,
                              score=check.get("score", 0), passed=bool(check.get("passed")),
                              problems=check.get("problems", [])[:4])
-    return png
+    return png, None
 
 
 def face_closeup(png: bytes, box=None) -> bytes:
