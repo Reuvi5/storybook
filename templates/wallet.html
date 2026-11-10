@@ -27,7 +27,8 @@
   @media (max-width: 600px) {
     .coldate { display: none; }
     .mdate { display: block; }
-    td, th { padding-left: 6px; padding-right: 6px; }
+    td, th { padding-left: 4px; padding-right: 4px; }
+    table { font-size: 14px; }
     .card.scroll { padding: 14px; }
   }
 {% endblock %}
@@ -68,7 +69,7 @@
         <div><div class="big">{{ money(price) }}</div><div class="detail">what each book costs you</div></div>
         <div><div class="big">{{ '$%.3f' % (price / 100 - a.avg_usd) }}</div><div class="detail">left over per book</div></div>
       </div>
-      <p class="hint">Includes every OpenAI call: image drawing, redraws from the quality check, and the checks themselves ({{ a.image_calls }} image calls, {{ a.retries }} retries, {{ a.analysis_calls }} checks in total).</p>
+      <p class="hint">Includes every OpenAI call: image drawing, redraws from the quality check, and the checks themselves ({{ a.image_calls }} image calls, {{ a.retries }} retr{{ 'y' if a.retries == 1 else 'ies' }}, {{ a.analysis_calls }} checks in total).</p>
     {% else %}
       <p class="hint">No books made yet.</p>
     {% endif %}

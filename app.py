@@ -265,6 +265,10 @@ def make():
     if not generator.FAKE_IMAGES and not os.environ.get("OPENAI_API_KEY"):
         return form_error("The server is missing its OpenAI API key.")
 
+    if storage.get_balance(user["id"]) < ledger.BOOK_PRICE_CENTS:  # say this before the hourly limit
+        return form_error(f"Each book costs {ledger.money(ledger.BOOK_PRICE_CENTS)}, and your balance is "
+                          f"{ledger.money(storage.get_balance(user['id']))}. Add funds in your Wallet first.")
+
     wait = wait_minutes(user["id"])
     if wait:
         log.info("rate_limited user=%s wait_minutes=%s", user["id"], wait)
@@ -345,6 +349,21 @@ def retry(book_id):
     if b.get("version", 1) >= 2 and b["status"] == "needs_retry":
         failed = [n for n in generator.image_names(b)[1:] if b["images"].get(n, {}).get("status") != "done"]
         generator.start_retry(storage, user["id"], book_id, failed)
+    return redirect(url_for("book", book_id=book_id))
+
+
+@app.post("/book/<book_id>/relayout")
+@login_required
+def relayout(book_id):
+    """Re-place the text on a finished book with the current layout rules and rebuild its PDF. Free:
+    no new pictures are drawn. Used for testing layout changes without paying for a new book."""
+    user = current_user()
+    b = get_own_book(book_id)
+    if b.get("version", 1) < 2 or b["status"] != "done":
+        abort(404)
+    changes = generator.relayout(storage, user["id"], b)
+    moved = sum(1 for old, new in changes.values() if old != new)
+    flash(f"Text placed again with the current rules: {moved} of {len(changes)} pages moved. The PDF was rebuilt.")
     return redirect(url_for("book", book_id=book_id))
 
 

@@ -29,9 +29,9 @@ BAND_MIN = 0.16                     # in band layout, the text strip is at least
 
 # Text spots, in image coordinates (0-1000 from the top-left); the inspector says which are clear.
 ZONES = {
-    "top": (0, 0, 1000, 280), "middle": (0, 360, 1000, 640), "bottom": (0, 720, 1000, 1000),
-    "top_left": (0, 0, 540, 360), "top_right": (460, 0, 1000, 360),
-    "bottom_left": (0, 640, 540, 1000), "bottom_right": (460, 640, 1000, 1000),
+    "top": (0, 0, 1000, 220), "middle": (0, 390, 1000, 610), "bottom": (0, 780, 1000, 1000),
+    "top_left": (0, 0, 540, 300), "top_right": (460, 0, 1000, 300),
+    "bottom_left": (0, 700, 540, 1000), "bottom_right": (460, 700, 1000, 1000),
 }
 ORDER = {  # full-width spots first (the scene was drawn to leave the preferred one empty), then half-width
     "top": ["top", "bottom", "middle", "top_left", "top_right", "bottom_left", "bottom_right"],
@@ -82,40 +82,63 @@ def _overlaps(a, b):
     return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
 
 
+PLAIN = 6.0    # busyness below this: plain wall, sky or ground: always fine for text
+BUSY = 18.0    # busyness above this: people, faces, detail: never, whatever the inspector said
+
+
+def busyness(art: bytes):
+    """A function rect -> how busy the picture is there (average edge strength, 0-255), measured on a
+    small copy. Plain areas measure about 1-5, characters and detailed scenery 15-40."""
+    from PIL import ImageFilter
+    import ai
+    with ai.IMAGE_WORK:
+        img = Image.open(io.BytesIO(art))
+        if img.format == "JPEG":
+            img.draft("L", (256, 384))
+        edges = img.convert("L").resize((128, 192)).filter(ImageFilter.FIND_EDGES)
+    w, h = edges.size
+
+    def measure(rect):
+        x0, y0, x1, y1 = rect  # page coordinates, origin bottom-left
+        box = (int(x0 / W * w) + 1, int((H - y1) / H * h) + 1, int(x1 / W * w) - 1, int((H - y0) / H * h) - 1)
+        if box[2] <= box[0] or box[3] <= box[1]:
+            return 0.0
+        px = edges.crop(box).histogram()
+        return sum(i * n for i, n in enumerate(px)) / max(1, sum(px))
+    return measure
+
+
 def place_text(text: str, regions: list, preferred: str = "bottom", art_png: bytes = None, zones: dict = None) -> dict:
     """Decide where the page's text goes. Returns a JSON-safe layout spec:
-       {"mode": "overlay", "slot", "rect": [x, y, w, h], "size", "lines", "theme"}  or
+       {"mode": "overlay", "slot", "rect": [x, y, w, h], "size", "lines", "theme", "busy"}  or
        {"mode": "band", "art_rect": [...], "rect": [...], "size", "lines", "theme": "paper"}
 
-    With `zones` (the inspector's answer to "is this spot clear?"), a spot is used only if the inspector
-    says it's clear AND the panel touches no face box. Without zones (older data), the panel must
-    touch no region box at all."""
+    Every spot is tried at the largest text size that fits it without touching a face (faces are never
+    covered, full stop). A spot is allowed if the picture is plain there (measured), or if the image
+    inspector says it's clear and the picture isn't busy there. Of the allowed spots, the plainest wins;
+    the scene's planned spot and full-width panels win ties."""
     faces = [_to_page(r["box"]) for r in regions if r.get("kind") == "face"]
     everything = [_to_page(r["box"]) for r in regions]
-    for zone in ORDER.get(preferred, ORDER["bottom"]):
-        if zones is not None and not zones.get(zone, False):
-            continue
-        blockers = faces if zones is not None else everything
+    measure = busyness(art_png) if art_png else (lambda rect: 0.0)
+    order = ORDER.get(preferred, ORDER["bottom"])
+    best = None
+    for rank, zone in enumerate(order):
+        blockers = faces if (zones is not None or art_png) else everything
         for size in FONT_SIZES:
             placed = _panel(zone, text, size)
-            if not placed:
+            if not placed or any(_overlaps(placed[0], b) for b in blockers):
                 continue
-            rect, lines = placed
-            if any(_overlaps(rect, b) for b in blockers):
-                continue
-            x0, y0, x1, y1 = rect
-            return {"mode": "overlay", "slot": zone, "rect": [x0, y0, x1 - x0, y1 - y0],
-                    "size": size, "lines": lines, "theme": _theme(art_png, rect)}
-    # Second choice: the inspector called nothing fully clear, but every scene was drawn with an empty
-    # area kept for its text. Use that planned spot (then the other full-width ones) if no face is in it.
-    if zones is not None:
-        for zone in [preferred] + [z for z in ("top", "bottom", "middle") if z != preferred]:
-            for size in FONT_SIZES:
-                placed = _panel(zone, text, size)
-                if placed and not any(_overlaps(placed[0], f) for f in faces):
-                    (x0, y0, x1, y1), lines = placed
-                    return {"mode": "overlay", "slot": zone, "rect": [x0, y0, x1 - x0, y1 - y0],
-                            "size": size, "lines": lines, "theme": _theme(art_png, placed[0]), "planned": True}
+            busy = measure(placed[0])
+            said_clear = zones.get(zone, False) if zones is not None else not any(_overlaps(placed[0], b) for b in everything)
+            if busy < PLAIN or (said_clear and busy < BUSY):
+                score = busy + 2.5 * rank + (4 if "_" in zone else 0) - (size - FONT_SIZES[-1]) * 0.3
+                if best is None or score < best[0]:
+                    best = (score, zone, placed, size, busy)
+            break  # the largest size that fits this spot is the one to judge
+    if best:
+        _, zone, ((x0, y0, x1, y1), lines), size, busy = best
+        return {"mode": "overlay", "slot": zone, "rect": [x0, y0, x1 - x0, y1 - y0], "size": size,
+                "lines": lines, "theme": _theme(art_png, (x0, y0, x1, y1)), "busy": round(busy, 1)}
     # Nothing is clear: give the text its own strip under the art (rare).
     size = FONT_SIZES[2]
     lines = _wrap(text, size, W - 2 * MARGIN - 2 * PAD)

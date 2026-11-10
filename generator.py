@@ -154,25 +154,27 @@ def _pipeline(storage, user_id, book_id, only_pages, meter):
         if only_pages is not None:
             hero = storage.get_blob(book_key(user_id, book_id, "hero.png"))
         else:
+            # 1+2. The hero, then the 20 pages. The pages start the moment the hero is DRAWN, while the
+            # hero is still being checked (saves the length of a check, about 5 s). If the check fails,
+            # those pages are stopped and redrawn with the next hero.
             t = time.time()
             storage.update_book(user_id, book_id, stage="character")
-            hero, why = _make_hero(storage, user_id, book_id, s, meter)
+            hero, why = _make_hero_and_pages(storage, user_id, book_id, s, meter, timings)
             _save_cost(storage, user_id, book_id, meter)
-            timings["character"] = round(time.time() - t, 1)
             if hero is None:
                 storage.update_book(user_id, book_id, status="failed", stage="failed", timings=timings, failure=why)
                 ledger.refund_failed_book(storage, user_id, book_id)
                 log.info("book_finished user=%s book=%s status=failed seconds=%.1f", user_id, book_id, time.time() - started)
                 return
+            timings["pages"] = round(time.time() - t, 1)
 
-        # 2. The 20 pages, all at once
-        t = time.time()
-        storage.update_book(user_id, book_id, stage="pages")
-        numbers = [int(n[4:]) for n in only_pages] if only_pages is not None else range(1, stories.PAGE_COUNT + 1)
-        with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
-            refs = _hero_refs(storage, user_id, book_id, hero)  # made once, shared by all 20 pages
-            list(pool.map(lambda n: _make_page(storage, user_id, book_id, s, n, refs, meter), numbers))
-        timings["pages"] = round(time.time() - t, 1)
+        if only_pages is not None:
+            # 2. Retry: only the pages that didn't come out, with the saved hero
+            t = time.time()
+            storage.update_book(user_id, book_id, stage="pages")
+            numbers = [int(n[4:]) for n in only_pages]
+            _draw_pages(storage, user_id, book_id, s, numbers, _hero_refs(storage, user_id, book_id, hero), meter)
+            timings["pages"] = round(time.time() - t, 1)
         _save_cost(storage, user_id, book_id, meter)
 
         book = storage.get_book(user_id, book_id)
@@ -195,6 +197,80 @@ def _pipeline(storage, user_id, book_id, only_pages, meter):
     except Exception:
         log.exception("book_crashed user=%s book=%s", user_id, book_id)
         storage.update_book(user_id, book_id, status="needs_retry", stage="needs_retry", timings=timings)
+
+
+def _draw_pages(storage, user_id, book_id, s, numbers, refs, meter, cancel=None):
+    with ThreadPoolExecutor(max_workers=CONCURRENCY) as pool:
+        list(pool.map(lambda n: _make_page(storage, user_id, book_id, s, n, refs, meter, cancel), numbers))
+
+
+def _make_hero_and_pages(storage, user_id, book_id, s, meter, timings):
+    """The quality loop for the hero (up to 3 drawings, best of them if none passes), with the pages
+    drawn in parallel with each hero's check. Returns (hero, None) or (None, why it failed)."""
+    photo = storage.get_image(user_id, book_id, "photo")
+    progress = _progress(storage, user_id, book_id, "hero")
+    numbers = list(range(1, stories.PAGE_COUNT + 1))
+    attempts, errors = [], []
+    t0 = time.time()
+    for n in range(1, assets.MAX_TRIES + 1):
+        progress(n, "drawing")
+        try:
+            png = ai.draw(stories.hero_prompt(s), [("photo.jpg", photo, "image/jpeg")], QUALITY, "Your character", meter, fmt="jpeg")
+        except Exception as e:  # noqa: BLE001
+            errors.append(str(e)[:300])
+            log.error("draw_failed image=%s/hero attempt=%s error=%s", book_id, n, str(e)[:200])
+            continue
+        progress(n, "checking")
+        _save_hero(storage, user_id, book_id, png, None)
+        timings["character"] = round(time.time() - t0, 1)
+        storage.update_book(user_id, book_id, stage="pages")
+        cancel = threading.Event()
+        pages = threading.Thread(target=_draw_pages, daemon=True,
+                                 args=(storage, user_id, book_id, s, numbers, _hero_refs(storage, user_id, book_id, png), meter, cancel))
+        pages.start()
+        try:
+            check = ai.inspect_hero(png, photo, meter)
+        except Exception as e:  # noqa: BLE001 - a checker failure doesn't throw the hero away
+            log.error("check_failed image=%s/hero attempt=%s error=%s", book_id, n, str(e)[:200])
+            check = {"passed": False, "score": 0, "problems": ["could not be inspected"], "regions": []}
+        attempts.append({"png": png, "check": check})
+        log.info("image_checked image=%s/hero attempt=%s passed=%s score=%s problems=%s", book_id, n,
+                 check.get("passed"), check.get("score"), "; ".join(check.get("problems", []))[:200])
+        if check.get("passed") or n == assets.MAX_TRIES and assets.best_of(attempts)["png"] is png:
+            _finish_hero(storage, user_id, book_id, png, check, n)
+            pages.join()
+            return png, None
+        # This hero didn't pass: stop its pages and try again.
+        cancel.set()
+        pages.join()
+        for num in numbers:
+            storage.set_image_status(user_id, book_id, page_name(num), "waiting", attempt=0)
+        storage.update_book(user_id, book_id, stage="character")
+    if not attempts:
+        why = failure_reason(errors)
+        storage.set_image_status(user_id, book_id, "hero", "failed", error=(errors[-1] if errors else "")[:200], attempt=assets.MAX_TRIES)
+        log.error("hero_failed user=%s book=%s reason=%s", user_id, book_id, why)
+        return None, why
+    # None passed: keep the best of them, and draw the pages with it.
+    best = assets.best_of(attempts)
+    _save_hero(storage, user_id, book_id, best["png"], best["check"])
+    _finish_hero(storage, user_id, book_id, best["png"], best["check"], assets.MAX_TRIES)
+    storage.update_book(user_id, book_id, stage="pages")
+    _draw_pages(storage, user_id, book_id, s, numbers, _hero_refs(storage, user_id, book_id, best["png"]), meter)
+    return best["png"], None
+
+
+def _save_hero(storage, user_id, book_id, png, check):
+    storage.put_blob(book_key(user_id, book_id, "hero.png"), png)
+    face = next((r["box"] for r in (check or {}).get("regions", []) if r.get("kind") == "face"), None)
+    storage.put_blob(book_key(user_id, book_id, "hero-face.jpg"), face_closeup(png, face))
+    storage.put_blob(book_key(user_id, book_id, thumb_for("hero")), assets.jpeg(png, 360, 80))
+
+
+def _finish_hero(storage, user_id, book_id, png, check, tries):
+    storage.set_image_status(user_id, book_id, "hero", "done", attempt=tries,
+                             score=check.get("score", 0), passed=bool(check.get("passed")),
+                             problems=check.get("problems", [])[:4])
 
 
 def _progress(storage, user_id, book_id, name):
@@ -273,7 +349,7 @@ def _hero_refs(storage, user_id, book_id, hero):
             "face": storage.get_blob(book_key(user_id, book_id, "hero-face.jpg")) or face_closeup(hero, None)}
 
 
-def _make_page(storage, user_id, book_id, s, number, refs, meter):
+def _make_page(storage, user_id, book_id, s, number, refs, meter, cancel=None):
     name = page_name(number)
     page = s["pages"][number - 1]
     t = time.time()
@@ -285,15 +361,22 @@ def _make_page(storage, user_id, book_id, s, number, refs, meter):
             check = {"score": plate["score"], "passed": plate["passed"], "problems": plate["problems"], "regions": []}  # zones come from the plate below
         else:
             cast_note = ("Characters who should appear: " + "; ".join(s["bible"][c] for c in page["cast"])) if page["cast"] else ""
-            png, check, tries = assets.draw_checked(
-                lambda: ai.draw(stories.swap_prompt(s, page),
+            def make():
+                if cancel is not None and cancel.is_set():
+                    raise assets.Cancelled()
+                return ai.draw(stories.swap_prompt(s, page),
                                 [("scene.jpg", plate["jpeg_bytes"], "image/jpeg"), ("hero.jpg", refs["jpg"], "image/jpeg"),
                                  ("face.jpg", refs["face"], "image/jpeg")],
-                                PAGE_QUALITY, f"{s['id']} page {number}", meter, fmt="jpeg"),
+                                PAGE_QUALITY, f"{s['id']} page {number}", meter, fmt="jpeg")
+
+            png, check, tries = assets.draw_checked(
+                make,
                 lambda img: ai.inspect_page(img, page["scene"], page["text"], refs["jpg"], cast_note, meter=meter),
                 f"{book_id}/{name}",
                 on_attempt=_progress(storage, user_id, book_id, name),
             )
+            if cancel is not None and cancel.is_set():
+                return  # the hero didn't pass; this page will be redrawn with the next one
             if png is None:
                 storage.set_image_status(user_id, book_id, name, "failed", error="The page couldn't be drawn")
                 return
@@ -316,6 +399,28 @@ def _make_page(storage, user_id, book_id, s, number, refs, meter):
     except Exception as e:  # noqa: BLE001
         log.exception("page_crashed user=%s book=%s page=%s", user_id, book_id, number)
         storage.set_image_status(user_id, book_id, name, "failed", error=f"{type(e).__name__}"[:100])
+
+
+def relayout(storage, user_id, book: dict) -> dict:
+    """Place the text again on a finished book's saved pictures with the current layout rules, and
+    rebuild its PDF. No OpenAI calls: it costs nothing. Returns {page: (old slot, new slot)}."""
+    s = stories.get_story(book["story_id"])
+    changes = {}
+    for n in range(1, stories.PAGE_COUNT + 1):
+        name = page_name(n)
+        info = book["images"].get(name, {})
+        if info.get("status") != "done":
+            continue
+        art = storage.get_blob(book_key(user_id, book["book_id"], file_for(name)))
+        plate = assets.plate(storage, s["id"], n)
+        page = s["pages"][n - 1]
+        layout = template.place_text(page["text"], plate.get("regions", []), page["zone"], art, plate.get("zones"))
+        changes[n] = ((info.get("layout") or {}).get("slot"), layout["slot"])
+        storage.set_image_status(user_id, book["book_id"], name, "done",
+                                 **{k: v for k, v in info.items() if k not in ("status", "layout")}, layout=layout)
+    make_pdf(storage, user_id, storage.get_book(user_id, book["book_id"]))
+    log.info("book_relayout user=%s book=%s changes=%s", user_id, book["book_id"], changes)
+    return changes
 
 
 def labeled_details(details: dict) -> list:

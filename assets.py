@@ -52,6 +52,10 @@ def _jpeg(data, max_side, quality):
     return buf.getvalue()
 
 
+class Cancelled(Exception):
+    """Raised inside a drawing job to stop it (the hero it was using turned out not to pass)."""
+
+
 def best_of(attempts):
     """Pick the attempt to keep: a passing one if any, else the highest score."""
     return max(attempts, key=lambda a: (a["check"].get("passed", False), a["check"].get("score", 0)))
@@ -66,6 +70,8 @@ def draw_checked(make, check, label, tries=MAX_TRIES, on_attempt=None, errors=No
             on_attempt(n, "drawing")
         try:
             png = make()
+        except Cancelled:
+            return None, None, n
         except Exception as e:  # noqa: BLE001
             log.error("draw_failed image=%s attempt=%s error=%s", label, n, str(e)[:200])
             if errors is not None:

@@ -224,17 +224,17 @@ def _ask(instructions: str, images: list, meter: Meter = None) -> dict:
 
 
 ZONES = {  # where a text panel can go: (x0, y0, x1, y1) in 0-1000 image coordinates, from the TOP-LEFT
-    "top": (0, 0, 1000, 280), "middle": (0, 360, 1000, 640), "bottom": (0, 720, 1000, 1000),
-    "top_left": (0, 0, 540, 360), "top_right": (460, 0, 1000, 360),
-    "bottom_left": (0, 640, 540, 1000), "bottom_right": (460, 640, 1000, 1000),
+    "top": (0, 0, 1000, 220), "middle": (0, 390, 1000, 610), "bottom": (0, 780, 1000, 1000),
+    "top_left": (0, 0, 540, 300), "top_right": (460, 0, 1000, 300),
+    "bottom_left": (0, 700, 540, 1000), "bottom_right": (460, 700, 1000, 1000),
 }
 ZONE_RULES = """"text_zones": for each of these areas of image 1 (coordinates 0-1000 from the top-left; the
   faint grid on image 1 shows them), would a text box placed there cover any face, any part of a character's
   head or body, or anything the story needs the reader to see? Plain sky, walls, floor, ground, grass or
   blurry background is fine to cover.
-    "top": y 0-280 full width, "middle": y 360-640 full width, "bottom": y 720-1000 full width,
-    "top_left": x 0-540 y 0-360, "top_right": x 460-1000 y 0-360,
-    "bottom_left": x 0-540 y 640-1000, "bottom_right": x 460-1000 y 640-1000
+    "top": y 0-220 full width, "middle": y 390-610 full width, "bottom": y 780-1000 full width,
+    "top_left": x 0-540 y 0-300, "top_right": x 460-1000 y 0-300,
+    "bottom_left": x 0-540 y 700-1000, "bottom_right": x 460-1000 y 700-1000
   Reply as {"top": {"clear": true/false, "would_cover": "what it would cover, or nothing"}, "middle": {...}, ...}
   for all seven. Be strict about faces and characters."""
 
