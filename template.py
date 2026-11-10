@@ -115,26 +115,33 @@ def place_text(text: str, regions: list, preferred: str = "bottom", art_png: byt
 
     Every spot is tried at the largest text size that fits it without touching a face (faces are never
     covered, full stop). A spot is allowed if the picture is plain there (measured), or if the image
-    inspector says it's clear and the picture isn't busy there. Of the allowed spots, the plainest wins;
-    the scene's planned spot and full-width panels win ties."""
+    inspector says it's clear and the picture isn't busy there. Of the allowed spots, the plainest wins,
+    with a strong preference for the scene's planned spot, full-width panels and large text. If none is
+    allowed, the plainest face-free full-width spot is used if it isn't busy; only if every spot is busy
+    does the page switch to the band layout."""
     faces = [_to_page(r["box"]) for r in regions if r.get("kind") == "face"]
-    everything = [_to_page(r["box"]) for r in regions]
     measure = busyness(art_png) if art_png else (lambda rect: 0.0)
     order = ORDER.get(preferred, ORDER["bottom"])
-    best = None
+    allowed, fallback = None, None
     for rank, zone in enumerate(order):
-        blockers = faces if (zones is not None or art_png) else everything
         for size in FONT_SIZES:
             placed = _panel(zone, text, size)
-            if not placed or any(_overlaps(placed[0], b) for b in blockers):
+            if not placed or any(_overlaps(placed[0], f) for f in faces):
                 continue
             busy = measure(placed[0])
-            said_clear = zones.get(zone, False) if zones is not None else not any(_overlaps(placed[0], b) for b in everything)
+            half = "_" in zone
+            # Lower is better: plain picture, the scene's planned spot, full width, big text.
+            score = busy + 2.0 * rank + (8 if half else 0) - (size - FONT_SIZES[-1]) * 0.8
+            # Without the inspector's answer (older data), measured plainness alone decides.
+            said_clear = zones.get(zone, False) if zones is not None else True
+            candidate = (score, zone, placed, size, busy)
             if busy < PLAIN or (said_clear and busy < BUSY):
-                score = busy + 2.5 * rank + (4 if "_" in zone else 0) - (size - FONT_SIZES[-1]) * 0.3
-                if best is None or score < best[0]:
-                    best = (score, zone, placed, size, busy)
+                if allowed is None or score < allowed[0]:
+                    allowed = candidate
+            if not half and busy < BUSY and (fallback is None or busy < fallback[4]):
+                fallback = candidate  # the plainest face-free full-width spot, in case nothing is allowed
             break  # the largest size that fits this spot is the one to judge
+    best = allowed or fallback
     if best:
         _, zone, ((x0, y0, x1, y1), lines), size, busy = best
         return {"mode": "overlay", "slot": zone, "rect": [x0, y0, x1 - x0, y1 - y0], "size": size,
