@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Orders · Storybook{% endblock %}
+{% block style %}
+  .list { display: grid; gap: 14px; max-width: 820px; }
+  .order { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; }
+  .order h2 { font-size: 19px; margin: 0; }
+  .meta { color: var(--muted); font-size: 14px; }
+  .status { justify-self: end; align-self: start; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: #eee3cc; white-space: nowrap; }
+  .status.good { background: var(--accent-soft); color: var(--accent); }
+  .status.bad { background: var(--danger-soft); color: var(--danger); }
+  .rows { grid-column: 1 / -1; display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; font-size: 14px; margin-top: 8px; }
+  .rows dt { color: var(--muted); }
+  .rows dd { margin: 0; }
+{% endblock %}
+{% block content %}
+  <h1>{{ 'Order' if one else 'Orders' }}</h1>
+  <p class="sub">Printed copies of your books. Test mode: orders go to Lulu's sandbox, so nothing is really printed or shipped.</p>
+  {% if not orders %}
+    <div class="card"><p style="margin:0">No printed orders yet. Open a finished book in <a href="{{ url_for('books') }}">My books</a> and choose "Order a printed copy".</p></div>
+  {% endif %}
+  <div class="list">
+    {% for o in orders %}
+      {% set st = o.lulu_status or o.status %}
+      <div class="card order">
+        <div>
+          <h2>{{ o.title }}</h2>
+          <div class="meta">Ordered {{ o.created_at | datetime }} · {{ money(o.price_cents) }}</div>
+        </div>
+        <span class="status {{ 'bad' if o.status == 'failed' or st in ('REJECTED', 'CANCELED', 'ERROR') else ('good' if st in ('SHIPPED', 'IN_PRODUCTION', 'PRODUCTION_READY') else '') }}">
+          {% if o.status == 'failed' %}Not accepted · refunded{% else %}{{ {'CREATED': 'Sent to printer', 'UNPAID': 'Waiting for printer payment (sandbox)', 'PAYMENT_IN_PROGRESS': 'Printer payment in progress', 'PRODUCTION_DELAYED': 'Queued at printer', 'PRODUCTION_READY': 'Ready to print', 'IN_PRODUCTION': 'Printing', 'SHIPPED': 'Shipped', 'REJECTED': 'Rejected by printer', 'CANCELED': 'Canceled', 'ERROR': 'Printer error'}.get(st, st) }}{% endif %}
+        </span>
+        <dl class="rows">
+          <dt>Ship to</dt><dd>{{ o.ship_to.name }}, {{ o.ship_to.city }}, {{ o.ship_to.state }} {{ o.ship_to.postcode }}</dd>
+          <dt>Book</dt><dd><a href="{{ url_for('book', book_id=o.book_id) }}">6 × 9 hardcover, {{ o.page_count }} pages</a> · approved {{ o.approved_at | datetime }}</dd>
+          {% if o.lulu_job_id %}<dt>Printer order</dt><dd>Lulu sandbox job {{ o.lulu_job_id }}{% if o.lulu_message %} · {{ o.lulu_message }}{% endif %}</dd>{% endif %}
+          {% if o.tracking %}<dt>Tracking</dt><dd><a href="{{ o.tracking }}" target="_blank">Track the package</a></dd>{% endif %}
+          {% if o.error %}<dt>Why</dt><dd>{{ o.error }}</dd>{% endif %}
+        </dl>
+      </div>
+    {% endfor %}
+  </div>
+{% endblock %}

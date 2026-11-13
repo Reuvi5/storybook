@@ -33,14 +33,17 @@ from flask import Flask, abort, flash, jsonify, redirect, render_template, reque
 from PIL import Image, ImageOps, UnidentifiedImageError  # noqa: E402
 from werkzeug.middleware.proxy_fix import ProxyFix  # noqa: E402
 
+import ai  # noqa: E402
 import assets  # noqa: E402
+import checks  # noqa: E402
 import generator  # noqa: E402
 import ledger  # noqa: E402
+import orders  # noqa: E402
 import stories  # noqa: E402
 import story as story_v1  # noqa: E402
 import wallet  # noqa: E402
 from auth import current_user, init_auth, login_required  # noqa: E402
-from book import build_pdf as build_pdf_v1, cover_geometry  # noqa: E402
+from book import build_pdf as build_pdf_v1, copyright_lines, cover_geometry  # noqa: E402
 from storage import book_key, content_type, get_storage, story_key  # noqa: E402
 
 try:
@@ -85,6 +88,7 @@ storage = get_storage()
 app.extensions["storybook_storage"] = storage
 init_auth(app)
 app.register_blueprint(wallet.bp)
+app.register_blueprint(orders.bp)
 
 # Each user can start this many books per hour (failed books don't count).
 BOOKS_PER_HOUR = int(os.environ.get("BOOKS_PER_HOUR", 3))
@@ -203,7 +207,12 @@ def inject_costs():
         except Exception:  # noqa: BLE001
             log.exception("cost_stats_failed")
             return {"books": 0, "avg_usd": None}
-    return {"avg_cost": avg_cost}
+    def print_stats():
+        try:
+            return orders.print_stats(storage)
+        except Exception:  # noqa: BLE001
+            return {"orders": 0, "avg_lulu": None}
+    return {"avg_cost": avg_cost, "print_stats": print_stats, "print_price": ledger.PRINT_PRICE_CENTS}
 
 
 @app.context_processor
@@ -245,9 +254,9 @@ def make():
         values[key] = request.form.get(key, "").strip()[:max_len]
     story_id = request.form.get("story", "")
 
-    def form_error(message):
+    def form_error(message, field_errors=None):
         return render_template("index.html", details=DETAILS, values=values, books_per_hour=BOOKS_PER_HOUR,
-                               stories=story_cards(), chosen=story_id, error=message)
+                               stories=story_cards(), chosen=story_id, error=message, field_errors=field_errors or {})
 
     if story_id not in stories.STORIES:
         return form_error("Please choose a story.")
@@ -265,6 +274,13 @@ def make():
     if not generator.FAKE_IMAGES and not os.environ.get("OPENAI_API_KEY"):
         return form_error("The server is missing its OpenAI API key.")
 
+    # Nothing inappropriate gets drawn or printed: check the name and About Me before charging.
+    check_meter = ai.Meter()
+    problems = checks.check_details(values, check_meter)
+    if problems:
+        log.info("details_rejected user=%s fields=%s", user["id"], ",".join(problems))
+        return form_error("Please fix the highlighted details. This book gets printed, so it has to be right.", problems)
+
     if storage.get_balance(user["id"]) < ledger.BOOK_PRICE_CENTS:  # say this before the hourly limit
         return form_error(f"Each book costs {ledger.money(ledger.BOOK_PRICE_CENTS)}, and your balance is "
                           f"{ledger.money(storage.get_balance(user['id']))}. Add funds in your Wallet first.")
@@ -280,7 +296,12 @@ def make():
         return form_error(f"Each book costs {ledger.money(ledger.BOOK_PRICE_CENTS)}, and your balance is "
                           f"{ledger.money(storage.get_balance(user['id']))}. Add funds in your Wallet first.")
     storage.put_image(user["id"], book_id, "photo", photo)
-    storage.create_book(user["id"], generator.new_book_record(book_id, story_id, values, now))
+    record = generator.new_book_record(book_id, story_id, values, now)
+    if check_meter.usd:  # the checks are part of what this book cost to make
+        record["cost"] = {**check_meter.summary(), "retries": 0, "estimated": False, "counted": False}
+        storage.add_counters("STATS", "COSTS", usd_micro=int(round(check_meter.usd * 1e6)),
+                             analysis_calls=check_meter.analysis_calls)
+    storage.create_book(user["id"], record)
     log.info("book_created user=%s book=%s story=%s", user["id"], book_id, story_id)
     generator.start_book(storage, user["id"], book_id)
     return redirect(url_for("book", book_id=book_id))
@@ -320,7 +341,8 @@ def book(book_id):
         stage_label=generator.STAGES.get(b.get("stage"), ""), pages=s["pages"],
         failed=[i for i in images if i["status"] == "failed"],
         photo_url=url_for("image", book_id=book_id, name="photo"), now_ts=int(time.time()),
-        cover=cover_geometry(s["title"]),
+        cover=cover_geometry(s["title"]), copyright=copyright_lines(s["title"], b["details"]["name"], book_id, b["created_at"]),
+        print_price=ledger.PRINT_PRICE_CENTS,
     )
 
 

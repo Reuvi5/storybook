@@ -54,6 +54,7 @@
       {% if user %}
         <a class="nav {{ 'on' if request.endpoint == 'index' }}" href="{{ url_for('index') }}">New book</a>
         <a class="nav {{ 'on' if request.endpoint in ('books', 'book') }}" href="{{ url_for('books') }}">My books</a>
+        <a class="nav {{ 'on' if request.endpoint and request.endpoint.startswith('orders') }}" href="{{ url_for('orders.orders') }}">Orders</a>
         <a class="nav {{ 'on' if request.endpoint and request.endpoint.startswith('wallet') }}" href="{{ url_for('wallet.wallet') }}">Wallet{% if balance is not none %}<span class="balance-chip">{{ money(balance) }}</span>{% endif %}</a>
         <span class="who">
           {% if user.picture %}<img src="{{ user.picture }}" alt="" referrerpolicy="no-referrer">{% endif %}

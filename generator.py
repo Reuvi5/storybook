@@ -427,16 +427,37 @@ def labeled_details(details: dict) -> list:
     return [(label, details.get(key, "")) for key, label in DETAIL_LABELS]
 
 
-def make_pdf(storage, user_id, book) -> bytes:
-    s = stories.get_story(book["story_id"])
+def book_pages(storage, user_id, book) -> list:
+    """[(art, layout)] for the 20 story pages."""
     bid = book["book_id"]
     with ThreadPoolExecutor(max_workers=10) as pool:
         arts = list(pool.map(lambda n: storage.get_blob(book_key(user_id, bid, file_for(page_name(n)))),
                              range(1, stories.PAGE_COUNT + 1)))
-    pages = [(art, book["images"][page_name(n)]["layout"]) for n, art in enumerate(arts, 1)]
+    return [(art, book["images"][page_name(n)]["layout"]) for n, art in enumerate(arts, 1)]
+
+
+def layouts_print_safe(book) -> bool:
+    """True if every text panel sits at least 0.5 inch inside the trim (books made before the margin
+    was widened need a free re-layout first)."""
+    for n in range(1, stories.PAGE_COUNT + 1):
+        lay = book["images"].get(page_name(n), {}).get("layout")
+        if not lay:
+            return False
+        x, y, w, h = lay["rect"]
+        if x < template.MARGIN - 0.5 or y < template.MARGIN - 0.5 or x + w > template.W - template.MARGIN + 0.5 \
+                or y + h > template.H - template.MARGIN + 0.5:
+            return False
+    return True
+
+
+def make_pdf(storage, user_id, book) -> bytes:
+    s = stories.get_story(book["story_id"])
+    bid = book["book_id"]
+    pages = book_pages(storage, user_id, book)
     data = pdf.build_story_pdf(
         s, book["details"]["name"], labeled_details(book["details"]),
-        storage.get_blob(book_key(user_id, bid, "hero.png")), storage.get_image(user_id, bid, "photo"), pages)
+        storage.get_blob(book_key(user_id, bid, "hero.png")), storage.get_image(user_id, bid, "photo"), pages,
+        book_id=bid, made_at=book["created_at"])
     storage.put_blob(book_key(user_id, bid, "book.pdf"), data)
     log.info("pdf_saved user=%s book=%s bytes=%s", user_id, bid, len(data))
     return data

@@ -142,6 +142,19 @@ STRIPE_SECRET_KEY=sk_test_...
 The app refuses any key that isn't a test key. To pay in test mode, use card 4242 4242 4242 4242,
 any future date, any CVC and any ZIP code.
 
+## 3b-2. Lulu printing (sandbox only)
+
+1. Make a free account at https://developers.sandbox.lulu.com (the **sandbox** site, not lulu.com).
+2. Open https://developers.sandbox.lulu.com/user-profile/api-keys and copy the client key and secret.
+3. Add them to `.env` and to Render's Environment tab, never anywhere else:
+```
+LULU_CLIENT_KEY=...
+LULU_CLIENT_SECRET=...
+```
+The app refuses any Lulu address that isn't the sandbox, so no real book can be ordered. Sandbox
+jobs stay "unpaid" and are never printed. To test the flow with no Lulu account at all, set
+`FAKE_PRINT=1`.
+
 ## 3c. Prepare the two stories (once)
 
 Each book uses a character bible and 20 scenes per story that are drawn ahead of time and saved to

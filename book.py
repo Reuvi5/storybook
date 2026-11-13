@@ -239,6 +239,10 @@ PANEL = {
 }
 
 
+PUBLISHER = os.environ.get("PUBLISHER", "Kupchik Games")
+PUBLISHER_URL = os.environ.get("PUBLISHER_URL", "storybook.kupchikgames.shop")
+
+
 def _draw_text(c, layout):
     panel, ink = PANEL[layout["theme"]]
     x, y, w, h = layout["rect"]
@@ -255,55 +259,124 @@ def _draw_text(c, layout):
         c.drawCentredString(x + w / 2, ty + (leading - size) * 0.62, line)
 
 
-def _story_page_v2(c, art_png, layout, number):
+def _fill(c, color, bleed=0):
+    """Fill the whole page, including the bleed (print) area."""
+    c.setFillColor(color)
+    c.rect(-bleed, -bleed, W + 2 * bleed, H + 2 * bleed, stroke=0, fill=1)
+
+
+def _full_art(c, art, bleed=0):
+    """Art filling the page; with bleed it runs past the trim edge (scaled up a few %, centered)."""
+    w = W + 2 * bleed
+    h = w * 1.5  # the art is 2:3
+    if h < H + 2 * bleed:
+        h = H + 2 * bleed
+        w = h / 1.5
+    c.drawImage(_jpeg(art), (W - w) / 2, (H - h) / 2, w, h)
+
+
+def _story_page_v2(c, art_png, layout, bleed=0):
+    """Everything is drawn in trim coordinates (0..W, 0..H); the caller moves the origin for print."""
     if layout["mode"] == "band":
-        c.setFillColor(PAPER)
-        c.rect(0, 0, W, H, stroke=0, fill=1)
+        _fill(c, PAPER, bleed)
         ax, ay, aw, ah = layout["art_rect"]
         c.drawImage(_jpeg(art_png), ax, ay, aw, ah)
     else:
-        c.drawImage(_jpeg(art_png), 0, 0, W, H)
+        _full_art(c, art_png, bleed)
     _draw_text(c, layout)  # the only text on the page (no page numbers: they could land on a face)
-    c.showPage()
+
+
+def copyright_lines(title, name, book_id, made_at):
+    import time as _t
+    year = _t.strftime("%Y", _t.gmtime(made_at))
+    month = _t.strftime("%B %Y", _t.gmtime(made_at))
+    return [
+        ("title", f"{title}"),
+        ("italic", f"starring {name}"),
+        ("gap", ""),
+        ("body", f"Text and illustrations copyright \u00a9 {year} {PUBLISHER}."),
+        ("body", "All rights reserved. No part of this book may be reproduced"),
+        ("body", "in any form without written permission from the publisher."),
+        ("gap", ""),
+        ("bold", f"Published by {PUBLISHER}"),
+        ("body", PUBLISHER_URL),
+        ("gap", ""),
+        ("body", "Adapted from the traditional folk tale."),
+        ("body", f"Illustrated with AI from a photo of {name};"),
+        ("body", "every page was checked before printing."),
+        ("gap", ""),
+        ("body", f"First edition, {month}"),
+        ("small", f"Book {book_id[:8]}"),
+    ]
+
+
+def _copyright_page(c, title, name, book_id, made_at, bleed=0):
+    """The inside page: copyright notice and publisher. The story starts on the next page."""
+    _fill(c, PAPER, bleed)
+    c.setFillColor(INK)
+    fonts = {"title": (STORY_FONT, 15, 20), "italic": ("Times-Italic", 12, 18), "body": (BODY_FONT, 9, 12.5),
+             "bold": (BODY_BOLD, 9, 12.5), "small": (BODY_FONT, 7.5, 11), "gap": (BODY_FONT, 9, 9)}
+    lines = copyright_lines(title, name, book_id, made_at)
+    total = sum(fonts[k][2] for k, _ in lines)
+    y = 72 + total  # set low on the page, like a real copyright page
+    for kind, text in lines:
+        font, size, lead = fonts[kind]
+        y -= lead
+        if text:
+            c.setFont(font, size)
+            c.drawCentredString(W / 2, y, text)
+
+
+def _the_end_page(c, name, bleed=0):
+    _fill(c, PAPER, bleed)
+    c.setFillColor(INK)
+    c.setFont(STORY_FONT, 44)
+    c.drawCentredString(W / 2, H / 2 + 10, "The End")
+    c.setFont("Times-Italic", 16)
+    c.drawCentredString(W / 2, H / 2 - 22, f"starring {name}")
 
 
 def cover_geometry(title):
-    """Where everything on the cover goes (shared by the PDF and the web preview)."""
-    lines = simpleSplit(title, STORY_FONT, 34, W - 60)
-    title_bottom = H - 64 - 40 * (len(lines) - 1)
-    by = 62
-    box_h = min(450, title_bottom - 18 - by - 12)
+    """Where everything on the front cover goes (shared by the PDF, the print cover and the web preview).
+    Everything stays at least 0.5 inch inside the trim."""
+    lines = simpleSplit(title, STORY_FONT, 34, W - 80)
+    title_bottom = H - 66 - 40 * (len(lines) - 1)
+    by = 74
+    box_h = min(440, title_bottom - 18 - by - 12)
     box_w = box_h * 2 / 3
-    return {"lines": lines, "box": [(W - box_w) / 2, by, box_w, box_h]}
+    return {"lines": lines, "box": [(W - box_w) / 2, by, box_w, box_h], "starring_y": 44}
 
 
-def _cover_v2(c, title, name, hero_png, story_id):
-    c.setFillColor(COVER_COLORS.get(story_id, INK))
-    c.rect(0, 0, W, H, stroke=0, fill=1)
+def _front_cover(c, title, name, hero_png, story_id, background=True):
+    if background:
+        _fill(c, COVER_COLORS.get(story_id, INK))
     cream = Color(1, 0.96, 0.86)
     g = cover_geometry(title)
     c.setFillColor(cream)
     c.setFont(STORY_FONT, 34)
     for i, line in enumerate(g["lines"]):
-        c.drawCentredString(W / 2, H - 64 - 40 * i, line)
+        c.drawCentredString(W / 2, H - 66 - 40 * i, line)
     # the hero, framed, between the title and the name: no text ever sits on the art
     bx, by, bw, bh = g["box"]
     c.roundRect(bx - 6, by - 6, bw + 12, bh + 12, 10, stroke=0, fill=1)
     c.drawImage(_jpeg(hero_png), bx, by, bw, bh)
     c.setFillColor(cream)
     c.setFont("Times-Italic", 20)
-    c.drawCentredString(W / 2, 30, f"starring {name}")
-    c.showPage()
+    c.drawCentredString(W / 2, g["starring_y"], f"starring {name}")
 
 
-def _about_me_v2(c, name, details, hero_png, photo):
-    c.setFillColor(PAPER)
-    c.rect(0, 0, W, H, stroke=0, fill=1)
+def _about_me_v2(c, name, details, hero_png, photo, background=True):
+    """The back cover: About Me. Everything at least 0.5 inch inside the trim."""
+    if background:
+        _fill(c, PAPER)
+    else:
+        c.setFillColor(PAPER)
+        c.roundRect(22, 22, W - 44, H - 44, 14, stroke=0, fill=1)
     c.setFillColor(INK)
     c.setFont(STORY_FONT, 32)
-    c.drawCentredString(W / 2, H - 54, "About Me")
-    box_w, box_h, gap = 176, 250, 20
-    top = H - 78
+    c.drawCentredString(W / 2, H - 70, "About Me")
+    box_w, box_h, gap = 160, 228, 20
+    top = H - 92
     lx = (W - 2 * box_w - gap) / 2
     rx = lx + box_w + gap
     _framed_image(c, photo, lx, top - box_h, box_w, box_h, INK)
@@ -316,7 +389,7 @@ def _about_me_v2(c, name, details, hero_png, photo):
     c.setFont(STORY_FONT, 24)
     c.drawCentredString(W / 2, y, name)
     y -= 30
-    left, max_width = 54, W - 108
+    left, max_width = 56, W - 112
     for label, value in details:
         if not value:
             continue
@@ -327,7 +400,7 @@ def _about_me_v2(c, name, details, hero_png, photo):
             y -= 17
             c.setFont(BODY_FONT, 12)
             for line in simpleSplit(value, BODY_FONT, 12, max_width):
-                if y < 30:
+                if y < 44:
                     break
                 c.drawString(left, y, line)
                 y -= 16
@@ -337,22 +410,82 @@ def _about_me_v2(c, name, details, hero_png, photo):
             c.setFont(BODY_FONT, 12.5)
             c.drawString(left + c.stringWidth(f"{label}: ", BODY_BOLD, 12.5), y, value)
             y -= 19
-    c.showPage()
 
 
-def build_story_pdf(story: dict, name: str, details: list, hero_png: bytes, photo: bytes, pages: list) -> bytes:
-    """pages: [(art_png, layout)] for the 20 story pages, in order."""
+def build_story_pdf(story: dict, name: str, details: list, hero_png: bytes, photo: bytes, pages: list,
+                    book_id: str = "00000000", made_at: int = 0) -> bytes:
+    """The book to read on screen and download: front cover, copyright page, the 20 story pages,
+    The End, and About Me as the back cover. pages: [(art, layout)] for the 20 story pages."""
     with _jpeg_folder():
-        return _build_story_pdf(story, name, details, hero_png, photo, pages)
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=(W, H))
+        c.setTitle(f"{story['title']}, starring {name}")
+        c.setAuthor(PUBLISHER)
+        _front_cover(c, story["title"], name, hero_png, story["id"]); c.showPage()
+        _copyright_page(c, story["title"], name, book_id, made_at); c.showPage()
+        for art, layout in pages:
+            _story_page_v2(c, art, layout); c.showPage()
+        _the_end_page(c, name); c.showPage()
+        _about_me_v2(c, name, details, hero_png, photo); c.showPage()
+        c.save()
+        return buf.getvalue()
 
 
-def _build_story_pdf(story, name, details, hero_png, photo, pages):
-    buf = io.BytesIO()
-    c = canvas.Canvas(buf, pagesize=(W, H))
-    c.setTitle(f"{story['title']}, starring {name}")
-    _cover_v2(c, story["title"], name, hero_png, story["id"])
-    for i, (art, layout) in enumerate(pages, 1):
-        _story_page_v2(c, art, layout, i)
-    _about_me_v2(c, name, details, hero_png, photo)
-    c.save()
-    return buf.getvalue()
+# ---------------------------------------------------------------------------
+# Print files (Lulu): an interior PDF with bleed, and a one-piece cover
+# ---------------------------------------------------------------------------
+BLEED = 9.0                  # 0.125 inch on every side
+PRINT_PAGE_MIN = 24          # hardcover minimum; the interior is padded with blank endpapers
+
+
+def build_print_interior(story, name, pages, book_id, made_at) -> bytes:
+    """6.25 x 9.25 in pages (6 x 9 trim + bleed): copyright, 20 story pages, The End, then blank
+    pages to reach the printer's minimum (and an even count)."""
+    with _jpeg_folder():
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=(W + 2 * BLEED, H + 2 * BLEED))
+        c.setTitle(f"{story['title']}, starring {name} (interior)")
+        count = 0
+
+        def page(draw):
+            nonlocal count
+            c.saveState()
+            c.translate(BLEED, BLEED)
+            draw()
+            c.restoreState()
+            c.showPage()
+            count += 1
+
+        page(lambda: _copyright_page(c, story["title"], name, book_id, made_at, BLEED))
+        for art, layout in pages:
+            page(lambda art=art, layout=layout: _story_page_v2(c, art, layout, BLEED))
+        page(lambda: _the_end_page(c, name, BLEED))
+        while count < PRINT_PAGE_MIN or count % 2:
+            page(lambda: _fill(c, PAPER, BLEED))  # endpaper
+        c.save()
+        return buf.getvalue(), count
+
+
+def build_print_cover(story, name, details, hero_png, photo, width, height) -> bytes:
+    """One-piece cover: back cover (About Me) | spine | front cover, at the exact size the printer asks
+    for (width x height in points, including bleed and the hardcover board wrap)."""
+    wrap = (height - H) / 2                     # bleed + board wrap, equal on every outer edge
+    spine = width - 2 * W - 2 * wrap
+    color = COVER_COLORS.get(story["id"], INK)
+    with _jpeg_folder():
+        buf = io.BytesIO()
+        c = canvas.Canvas(buf, pagesize=(width, height))
+        c.setTitle(f"{story['title']}, starring {name} (cover)")
+        c.setFillColor(color)
+        c.rect(0, 0, width, height, stroke=0, fill=1)
+        c.saveState()                           # back cover, left
+        c.translate(wrap, wrap)
+        _about_me_v2(c, name, details, hero_png, photo, background=False)
+        c.restoreState()
+        c.saveState()                           # front cover, right
+        c.translate(wrap + W + spine, wrap)
+        _front_cover(c, story["title"], name, hero_png, story["id"], background=False)
+        c.restoreState()
+        c.showPage()
+        c.save()
+        return buf.getvalue(), {"wrap": round(wrap, 2), "spine": round(spine, 2)}

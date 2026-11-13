@@ -75,6 +75,18 @@
     {% endif %}
   </div>
 
+  {% set ps = print_stats() %}
+  <div class="card" style="margin-bottom:28px">
+    <div class="label">A printed, shipped book</div>
+    <div class="costrow">
+      <div><div class="big">{{ money(print_price) }}</div><div class="detail">what a printed copy costs you, shipping included</div></div>
+      {% if ps.avg_lulu is not none %}
+        <div><div class="big">${{ '%.2f' % ps.avg_lulu }}</div><div class="detail">average printing + shipping (Lulu), over {{ ps.orders }} order{{ '' if ps.orders == 1 else 's' }}</div></div>
+      {% endif %}
+    </div>
+    <p class="hint">Printed by Lulu as a 6 × 9 inch full-color hardcover. Test mode: orders go to Lulu's sandbox.</p>
+  </div>
+
   <h2 style="font-family:Georgia,serif; margin:0 0 10px">History</h2>
   {% if not txns %}
     <div class="card"><p style="margin:0">No transactions yet. Add funds to make your first book.</p></div>
@@ -103,6 +115,8 @@
                   {% elif t.kind == 'book_refund' %}The book failed, so it was free
                   {% elif t.kind == 'refund' %}Requested {{ t.requested_at | datetime }}{% if t.processed_at %} · processed {{ t.processed_at | datetime }}{% endif %}{% if t.stripe_refund %} · Stripe refund {{ t.stripe_refund }}{% endif %}
                   {% elif t.kind == 'refund_reversed' %}Stripe rejected the refund
+                  {% elif t.kind == 'print' %}<a href="{{ url_for('orders.order', order_id=t.order_id) }}">Printed and shipped by Lulu (sandbox)</a>
+                  {% elif t.kind == 'print_refund' %}The printer couldn't accept the order
                   {% endif %}
                 </div>
                 {% if t.kind == 'deposit' and t.refundable %}

@@ -21,6 +21,8 @@
   input[type=text], textarea { width: 100%; padding: 11px 12px; border: 1px solid #ddd2bf; border-radius: 10px; font-size: 15px; background: #fff; font-family: inherit; }
   input[type=text]:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   textarea { min-height: 96px; resize: vertical; }
+  .bad { border-color: var(--danger) !important; background: var(--danger-soft) !important; }
+  .ferr { color: var(--danger); font-size: 13.5px; margin-top: 5px; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
   @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
   .drop { display: flex; gap: 16px; align-items: center; border: 2px dashed #d8ccb6; border-radius: 12px; padding: 16px; cursor: pointer; background: #fffdf8; }
@@ -67,17 +69,21 @@
       <h2><span class="num">3</span> About Me</h2>
       <p class="hint" style="margin-top:-4px">This goes on the back page.</p>
       <label class="f" for="name">Name</label>
-      <input type="text" id="name" name="name" maxlength="40" required value="{{ values.get('name', '') }}">
+      <input type="text" id="name" name="name" maxlength="40" required value="{{ values.get('name', '') }}" {% if field_errors and field_errors.name %}class="bad" aria-invalid="true"{% endif %}>
+      {% if field_errors and field_errors.name %}<div class="ferr">{{ field_errors.name }}</div>{% endif %}
       <div class="grid">
         {% for key, label, max_len in details if key != 'about' %}
           <div>
             <label class="f" for="{{ key }}">{{ label }} <span class="opt">(optional)</span></label>
-            <input type="text" id="{{ key }}" name="{{ key }}" maxlength="{{ max_len }}" value="{{ values.get(key, '') }}">
+            <input type="text" id="{{ key }}" name="{{ key }}" maxlength="{{ max_len }}" value="{{ values.get(key, '') }}" {% if field_errors and field_errors[key] %}class="bad" aria-invalid="true"{% endif %}>
+            {% if field_errors and field_errors[key] %}<div class="ferr">{{ field_errors[key] }}</div>{% endif %}
           </div>
         {% endfor %}
       </div>
       <label class="f" for="about">About me <span class="opt">(optional)</span></label>
-      <textarea id="about" name="about" maxlength="600" placeholder="Hobbies, best friend, what they want to be when they grow up...">{{ values.get('about', '') }}</textarea>
+      <textarea id="about" name="about" maxlength="600" placeholder="Hobbies, best friend, what they want to be when they grow up..." {% if field_errors and field_errors.about %}class="bad" aria-invalid="true"{% endif %}>{{ values.get('about', '') }}</textarea>
+      {% if field_errors and field_errors.about %}<div class="ferr">{{ field_errors.about }}</div>{% endif %}
+      <p class="hint">Everything here is printed on the back cover, so it's checked first: a real name, nothing unkind or inappropriate, and no phone numbers, emails or addresses.</p>
     </section>
 
     <div class="card pay">

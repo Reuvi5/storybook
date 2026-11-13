@@ -18,20 +18,20 @@ from PIL import Image
 from reportlab.lib.utils import simpleSplit
 
 W, H = 432.0, 648.0                 # page size in points
-MARGIN = 20.0                       # space between the panel and the page edge
+MARGIN = 36.0                       # text stays 0.5 inch inside the trim (the printer's safety margin)
 PAD = 13.0                          # space inside the panel around the text
 REGION_PAD = 0.025                  # protected boxes grow by 2.5% of the page on every side
 STORY_FONT = "Times-Bold"
-FONT_SIZES = [19, 18, 17, 16, 15, 14, 13]   # largest first; never smaller than 13 pt
+FONT_SIZES = [18, 17, 16, 15, 14, 13, 12]   # largest first; never smaller than 12 pt
 LEADING = 1.28
 BAND_MIN = 0.16                     # in band layout, the text strip is at least 16% of the page
 
 
 # Text spots, in image coordinates (0-1000 from the top-left); the inspector says which are clear.
 ZONES = {
-    "top": (0, 0, 1000, 220), "middle": (0, 390, 1000, 610), "bottom": (0, 780, 1000, 1000),
-    "top_left": (0, 0, 540, 300), "top_right": (460, 0, 1000, 300),
-    "bottom_left": (0, 700, 540, 1000), "bottom_right": (460, 700, 1000, 1000),
+    "top": (0, 0, 1000, 250), "middle": (0, 375, 1000, 625), "bottom": (0, 750, 1000, 1000),
+    "top_left": (0, 0, 540, 320), "top_right": (460, 0, 1000, 320),
+    "bottom_left": (0, 680, 540, 1000), "bottom_right": (460, 680, 1000, 1000),
 }
 ORDER = {  # full-width spots first (the scene was drawn to leave the preferred one empty), then half-width
     "top": ["top", "bottom", "middle", "top_left", "top_right", "bottom_left", "bottom_right"],

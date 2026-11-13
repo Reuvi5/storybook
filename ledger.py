@@ -11,6 +11,8 @@ Kinds of entry:
   book_refund     + the $0.99 given back automatically if a book fails completely
   refund          - money sent back to the card through Stripe (requested, then processed)
   refund_reversed + a refund Stripe rejected, put back into the balance
+  print           - a printed, shipped copy of a book (Lulu, sandbox)
+  print_refund    + a print order Lulu refused, money returned
 """
 
 import logging
@@ -23,7 +25,7 @@ import stripe
 log = logging.getLogger("storybook.ledger")
 
 BOOK_PRICE_CENTS = 99
-FUND_OPTIONS_CENTS = [500, 1000, 2000]
+FUND_OPTIONS_CENTS = [500, 1000, 2000, 5000]
 
 
 def money(cents: int) -> str:
@@ -100,6 +102,26 @@ def refund_failed_book(storage, user_id, book_id) -> None:
                txn_id=f"bookrefund-{book_id}", book_id=book_id)
     if storage.add_txn(user_id, txn) == "ok":
         log.info("book_refunded user=%s book=%s", user_id, book_id)
+
+
+# ---------------------------------------------------------------------------
+# Printed books
+# ---------------------------------------------------------------------------
+PRINT_PRICE_CENTS = int(__import__("os").environ.get("PRINT_PRICE_CENTS", 3499))
+
+
+def charge_for_print(storage, user_id, order_id, cents, description) -> bool:
+    txn = _txn("print", -cents, description, txn_id=f"print-{order_id}", order_id=order_id)
+    ok = storage.add_txn(user_id, txn) in ("ok", "duplicate")
+    if ok:
+        log.info("print_charged user=%s order=%s cents=%s", user_id, order_id, cents)
+    return ok
+
+
+def refund_print(storage, user_id, order_id, cents, reason) -> None:
+    txn = _txn("print_refund", cents, f"Refund: {reason}", txn_id=f"printrefund-{order_id}", order_id=order_id)
+    if storage.add_txn(user_id, txn) == "ok":
+        log.info("print_refunded user=%s order=%s cents=%s", user_id, order_id, cents)
 
 
 # ---------------------------------------------------------------------------

@@ -62,6 +62,16 @@
   .q { font-size: 12px; padding: 1px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
   .q.best { background: var(--warn-soft); color: #8a5a00; }
   .costline { font-size: 13.5px; color: var(--muted); margin: -12px 0 20px; }
+  .paperpage { background: #fcf5e3; }
+  .cr { position: absolute; left: 0; right: 0; bottom: 11cqw; text-align: center; color: var(--ink); font-size: 2.1cqw; line-height: 1.4; }
+  .cr-title { font-family: "Times New Roman", serif; font-weight: bold; font-size: 3.5cqw; }
+  .cr-italic { font-family: "Times New Roman", serif; font-style: italic; font-size: 2.8cqw; margin-bottom: 2cqw; }
+  .cr-gap { height: 2cqw; }
+  .cr-bold { font-weight: 600; }
+  .cr-small { font-size: 1.7cqw; color: var(--muted); }
+  .end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ink); }
+  .end-t { font-family: "Times New Roman", serif; font-weight: bold; font-size: 10cqw; }
+  .end-s { font-family: "Times New Roman", serif; font-style: italic; font-size: 3.7cqw; }
   .costline b { color: var(--ink); }
 {% endblock %}
 {% block content %}
@@ -77,6 +87,7 @@
     {% if book.status == 'done' %}
       <div class="actions">
         <a class="btn" href="{{ url_for('download', book_id=book_id) }}">Download PDF</a>
+        <a class="btn secondary" href="{{ url_for('orders.print_page', book_id=book_id) }}">Order a printed copy · {{ money(print_price) }}</a>
         <form action="{{ url_for('delete', book_id=book_id) }}" method="post" onsubmit="return confirm('Delete this book for good?');"><button class="btn danger">Delete</button></form>
       </div>
     {% endif %}
@@ -148,6 +159,13 @@
         <figcaption class="cap"><span>Cover</span><span class="q {{ '' if images[0].passed else 'best' }}">{{ images[0].state }}</span></figcaption>
       </figure>
 
+      <figure class="page">
+        <div class="frame paperpage"><div class="cr">
+          {% for kind, text in copyright %}<div class="cr-{{ kind }}">{{ text }}</div>{% endfor %}
+        </div></div>
+        <figcaption class="cap"><span>Copyright page</span></figcaption>
+      </figure>
+
       {% for img in images[1:] %}
         {% set L = img.layout %}
         {% set x, y, w, h = L.rect %}
@@ -170,6 +188,11 @@
       {% endfor %}
 
       <figure class="page">
+        <div class="frame paperpage"><div class="end"><div class="end-t">The End</div><div class="end-s">starring {{ values.name }}</div></div></div>
+        <figcaption class="cap"><span>The End</span></figcaption>
+      </figure>
+
+      <figure class="page">
         <div class="frame about"><div class="in">
           <h3>About Me</h3>
           <div class="compare">
@@ -181,7 +204,7 @@
             {% if values.get(key) %}<p><strong>{{ label }}:</strong> {{ values.get(key) }}</p>{% endif %}
           {% endfor %}
         </div></div>
-        <figcaption class="cap"><span>About Me</span></figcaption>
+        <figcaption class="cap"><span>Back cover: About Me</span></figcaption>
       </figure>
     </div>
   {% endif %}
