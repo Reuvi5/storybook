@@ -1,54 +1,76 @@
 {% extends "base.html" %}
 {% block title %}New book · Storybook{% endblock %}
 {% block style %}
-  .wrap { max-width: 760px; margin: 0 auto; }
-  .step { margin-bottom: 22px; }
-  .step h2 { display: flex; align-items: center; gap: 10px; }
-  .num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font: 600 14px var(--sans); display: inline-flex; align-items: center; justify-content: center; }
+  .wrap { max-width: 800px; margin: 0 auto; }
+  .intro { display: flex; align-items: center; gap: 18px; margin-bottom: 26px; }
+  .intro .sub { margin: 0; }
+  .intro .badge { flex: none; width: 64px; height: 64px; border-radius: 20px; background: var(--sun); box-shadow: 0 5px 0 #d9a21b; display: flex; align-items: center; justify-content: center; transform: rotate(-6deg); }
+  .intro .badge svg { width: 34px; height: 34px; }
+  @media (max-width: 560px) { .intro .badge { display: none; } }
+  .step { margin-bottom: 20px; }
+  .step h2 { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .num { width: 34px; height: 34px; border-radius: 12px; color: #fff; font: 700 17px var(--serif); display: inline-flex; align-items: center; justify-content: center; flex: none; transform: rotate(-6deg); }
+  .num.c1 { background: var(--brand); box-shadow: 0 3px 0 var(--brand-dark); }
+  .num.c2 { background: var(--coral); box-shadow: 0 3px 0 #d9503c; }
+  .num.c3 { background: var(--mint); box-shadow: 0 3px 0 #17805c; }
   .stories { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 560px) { .stories { grid-template-columns: 1fr; } }
-  .story { position: relative; display: flex; gap: 14px; align-items: center; border: 2px solid var(--line); border-radius: 12px; padding: 12px; cursor: pointer; background: #fff; transition: border-color .15s, box-shadow .15s; }
-  .story:hover { border-color: #cfc3ad; }
+  .story { position: relative; display: flex; gap: 16px; align-items: center; border: 2px solid var(--line); border-radius: 18px; padding: 12px; cursor: pointer; background: #fff; transition: border-color .15s, box-shadow .15s, transform .15s; }
+  .story:hover { border-color: #d5cbf9; transform: translateY(-2px); }
   .story input { position: absolute; opacity: 0; pointer-events: none; }
-  .story:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  .story:has(input:disabled) { opacity: .55; cursor: not-allowed; }
-  .story .cov { width: 64px; aspect-ratio: 2/3; border-radius: 6px; background: #efe6d4; overflow: hidden; flex: none; }
+  .story:has(input:checked) { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
+  .story:has(input:focus-visible) { outline: 3px solid var(--sun); outline-offset: 2px; }
+  .story:has(input:disabled) { opacity: .55; cursor: not-allowed; transform: none; }
+  .story .tick { position: absolute; top: -9px; right: -9px; width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: #fff; display: none; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #fff; }
+  .story .tick svg { width: 16px; height: 16px; }
+  .story:has(input:checked) .tick { display: flex; }
+  .story .cov { width: 78px; aspect-ratio: 2/3; border-radius: 4px 10px 10px 4px; background: #efe6d4; overflow: hidden; flex: none; box-shadow: inset 4px 0 0 rgba(0,0,0,.15), 0 6px 14px rgba(31,32,65,.18); }
   .story .cov img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .story strong { display: block; font-family: var(--serif); font-size: 17px; }
-  .story span { font-size: 13px; color: var(--muted); }
-  label.f { display: block; font-weight: 600; font-size: 14px; margin: 16px 0 6px; }
-  .opt { font-weight: 400; color: var(--muted); }
-  input[type=text], textarea { width: 100%; padding: 11px 12px; border: 1px solid #ddd2bf; border-radius: 10px; font-size: 15px; background: #fff; font-family: inherit; }
-  input[type=text]:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-  textarea { min-height: 96px; resize: vertical; }
+  .story strong { display: block; font-family: var(--serif); font-weight: 600; font-size: 18px; line-height: 1.2; margin-bottom: 4px; }
+  .story span { font-size: 13.5px; color: var(--muted); }
+  label.f { display: block; font-weight: 800; font-size: 14.5px; margin: 16px 0 6px; }
+  .opt { font-weight: 600; color: var(--muted); }
+  input[type=text], textarea { width: 100%; padding: 12px 14px; border: 2px solid var(--line); border-radius: 14px; font-size: 16px; background: #fff; font-family: inherit; color: var(--ink); transition: border-color .15s, box-shadow .15s; }
+  input[type=text]:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
+  textarea { min-height: 100px; resize: vertical; }
   .bad { border-color: var(--danger) !important; background: var(--danger-soft) !important; }
-  .ferr { color: var(--danger); font-size: 13.5px; margin-top: 5px; }
+  .ferr { color: var(--danger); font-size: 13.5px; font-weight: 700; margin-top: 6px; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
   @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
-  .drop { display: flex; gap: 16px; align-items: center; border: 2px dashed #d8ccb6; border-radius: 12px; padding: 16px; cursor: pointer; background: #fffdf8; }
-  .drop:hover { border-color: var(--accent); }
+  .drop { display: flex; gap: 18px; align-items: center; border: 2.5px dashed #cfc6f5; border-radius: 18px; padding: 18px; cursor: pointer; background: linear-gradient(180deg, #faf9ff, #f4f1ff); transition: border-color .15s, background .15s; }
+  .drop:hover { border-color: var(--brand); background: #f1edff; }
   .drop input { display: none; }
-  .drop .pv { width: 72px; height: 72px; border-radius: 10px; background: #efe6d4 center/cover no-repeat; flex: none; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 26px; }
-  .pay { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
-  .pay .price { font-size: 15px; color: var(--muted); }
-  .pay .price b { color: var(--ink); }
-  .pay .btn { padding: 14px 26px; font-size: 16px; }
+  .drop .pv { width: 86px; height: 86px; border-radius: 22px; background: #fff center/cover no-repeat; flex: none; display: flex; align-items: center; justify-content: center; color: var(--brand); font-size: 26px; font-weight: 800; box-shadow: 0 6px 16px rgba(91,71,224,.16); }
+  .drop .pv svg { width: 38px; height: 38px; }
+  .drop strong { font-family: var(--serif); font-weight: 600; font-size: 18px; color: var(--ink); word-break: break-all; }
+  .pay { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--ink); color: #fff; border: 0; }
+  .pay .price { font-size: 15px; color: #c9c8e6; }
+  .pay .price b { color: #fff; font-family: var(--serif); font-size: 26px; font-weight: 700; margin-right: 4px; }
+  .pay .price b.small { font-size: inherit; font-family: inherit; }
+  .pay .btn { padding: 15px 28px; font-size: 17px; }
+  .pay .btn.sun { box-shadow: 0 4px 0 #b9860c; }
 {% endblock %}
 {% block content %}
 <div class="wrap">
-  <h1>Make a new storybook</h1>
-  <p class="sub">A 20-page picture book starring whoever is in the photo, ready in about a minute.</p>
+  <div class="intro">
+    <div class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l2.6 6.8L22 9.6l-5.6 4.8 1.8 7.2L12 17.8 5.8 21.6l1.8-7.2L2 9.6l7.4-.8z" fill="#fff" stroke="#3d2a00" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
+    <div>
+      <h1>Make a new storybook</h1>
+      <p class="sub">A 20-page picture book starring whoever is in the photo, ready in about a minute.</p>
+    </div>
+  </div>
 
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
 
   <form action="{{ url_for('make') }}" method="post" enctype="multipart/form-data" id="form">
     <section class="card step">
-      <h2><span class="num">1</span> Choose a story</h2>
+      <h2><span class="num c1">1</span> Choose a story</h2>
       <div class="stories">
         {% for s in stories %}
           <label class="story">
             <input type="radio" name="story" value="{{ s.id }}" {% if not s.ready %}disabled{% endif %}
                    {% if (chosen or '') == s.id or (not chosen and s.ready and loop.first) %}checked{% endif %} required>
+            <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <div class="cov">{% if s.cover %}<img src="{{ s.cover }}" alt="">{% endif %}</div>
             <div><strong>{{ s.title }}</strong><span>{% if s.ready %}20 pages · they play {{ s.hero }}{% else %}Coming soon{% endif %}</span></div>
           </label>
@@ -57,16 +79,16 @@
     </section>
 
     <section class="card step">
-      <h2><span class="num">2</span> Add a photo</h2>
+      <h2><span class="num c2">2</span> Add a photo</h2>
       <label class="drop" for="photo">
-        <div class="pv" id="pv">+</div>
+        <div class="pv" id="pv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.7l1.3-2h5l1.3 2h1.7A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
         <div><strong id="pvname">Choose a photo</strong><div class="hint">A clear, front-facing photo in good light works best. It's printed on the About Me page next to the cartoon.</div></div>
         <input type="file" id="photo" name="photo" accept="image/*,.heic" required>
       </label>
     </section>
 
     <section class="card step">
-      <h2><span class="num">3</span> About Me</h2>
+      <h2><span class="num c3">3</span> About Me</h2>
       <p class="hint" style="margin-top:-4px">This goes on the back page.</p>
       <label class="f" for="name">Name</label>
       <input type="text" id="name" name="name" maxlength="40" required value="{{ values.get('name', '') }}" {% if field_errors and field_errors.name %}class="bad" aria-invalid="true"{% endif %}>
@@ -88,11 +110,11 @@
 
     <div class="card pay">
       {% if balance is not none and balance < price %}
-        <div class="price">Each book costs <b>{{ money(price) }}</b>. Your balance is <b>{{ money(balance) }}</b>.</div>
-        <a class="btn" href="{{ url_for('wallet.wallet') }}">Add funds</a>
+        <div class="price">Each book costs <b class="small">{{ money(price) }}</b>. Your balance is <b class="small">{{ money(balance) }}</b>.</div>
+        <a class="btn sun" href="{{ url_for('wallet.wallet') }}">Add funds</a>
       {% else %}
         <div class="price"><b>{{ money(price) }}</b> from your balance of {{ money(balance or 0) }}</div>
-        <button type="submit" class="btn" id="go">Make my storybook</button>
+        <button type="submit" class="btn sun" id="go">Make my storybook</button>
       {% endif %}
     </div>
   </form>

@@ -194,8 +194,9 @@ def story_cards() -> list:
     for s in stories.STORIES.values():
         ready = assets.story_ready(storage, s["id"])
         cover = file_url(story_key(s["id"], "plates/thumb-01.jpg")) if ready else None
+        samples = [file_url(story_key(s["id"], f"plates/thumb-{n:02d}.jpg")) for n in (4, 11, 17)] if ready else []
         cards.append({"id": s["id"], "title": s["title"], "hero": s["hero_name"], "ready": ready, "cover": cover,
-                      "blurb": s["pages"][0]["text"]})
+                      "samples": samples, "blurb": s["pages"][0]["text"]})
     return cards
 
 
@@ -234,7 +235,12 @@ def inject_user():
 @app.get("/")
 def index():
     if not current_user():
-        return render_template("landing.html")
+        try:
+            cards = story_cards()
+        except Exception:  # noqa: BLE001  (the landing page never breaks over the pictures)
+            log.exception("landing_story_cards_failed")
+            cards = []
+        return render_template("landing.html", stories=cards)
     return render_template("index.html", details=DETAILS, values={}, books_per_hour=BOOKS_PER_HOUR,
                            stories=story_cards())
 

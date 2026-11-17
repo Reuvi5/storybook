@@ -3,26 +3,33 @@
 {% block style %}
   .top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 20px; margin-bottom: 28px; }
   @media (max-width: 760px) { .top { grid-template-columns: 1fr; } }
-  .balance { font-family: Georgia, serif; font-size: 44px; font-weight: bold; margin: 4px 0 6px; }
-  .label { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .balance { font-family: var(--serif); font-size: 52px; font-weight: 700; line-height: 1.05; margin: 8px 0 8px; }
+  .balcard { position: relative; overflow: hidden; background: linear-gradient(150deg, #6a57ef, #3d2bb3); color: #fff; border: 0; box-shadow: 0 16px 34px rgba(65,48,191,.28); }
+  .balcard .label { color: #d9d3ff; }
+  .balcard .detail { color: #e6e2ff; }
+  .balcard::before { content: ""; position: absolute; right: -40px; top: -40px; width: 170px; height: 170px; border-radius: 50%; background: rgba(255,255,255,.08); }
+  .balcard::after { content: ""; position: absolute; right: 22px; bottom: 20px; width: 46px; height: 46px; border-radius: 50%; background: var(--sun); box-shadow: inset 0 -5px 0 #e0a514, 0 0 0 8px rgba(255,200,69,.18); }
+  .label { font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
   .amounts { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0 8px; }
   .amounts .btn { min-width: 92px; }
   table { width: 100%; border-collapse: collapse; font-size: 15px; }
-  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; padding: 0 10px 8px; border-bottom: 1px solid var(--line); }
-  td { padding: 12px 10px; border-bottom: 1px solid #f0e7d6; vertical-align: top; }
+  th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 800; padding: 0 10px 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 13px 10px; border-bottom: 1px solid #f2ece2; vertical-align: top; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: #fcfaf6; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   th.num { text-align: right; }
-  .plus { color: #1f6b33; font-weight: 600; }
-  .minus { color: #8a1c1c; font-weight: 600; }
-  .why { font-weight: 600; }
+  .plus { color: var(--good); font-weight: 800; }
+  .minus { color: var(--ink); font-weight: 800; }
+  .why { font-weight: 800; }
   .detail { font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 10px; background: #eee3cc; margin-left: 6px; font-weight: normal; }
-  .pill.ok { background: #e2f1e4; color: #1f5a2c; }
-  .pill.bad { background: #fde8e8; color: #8a1c1c; }
+  .pill { display: inline-block; font-size: 12px; font-weight: 800; padding: 1px 9px; border-radius: 999px; background: var(--sun-soft); margin-left: 6px; font-weight: normal; }
+  .pill.ok { background: var(--good-soft); color: var(--good); }
+  .pill.bad { background: var(--danger-soft); color: var(--danger); }
   .refundbtn { margin-top: 6px; padding: 5px 10px; font-size: 13px; border-radius: 8px; }
   .scroll { overflow-x: auto; }
   .costrow { display: flex; gap: 32px; flex-wrap: wrap; margin: 8px 0 4px; }
-  .costrow .big { font-family: var(--serif); font-size: 26px; font-weight: 700; }
+  .costrow .big { font-family: var(--serif); font-size: 30px; font-weight: 700; color: var(--brand); }
   .mdate { display: none; font-size: 13px; color: var(--muted); margin-bottom: 2px; }
   @media (max-width: 600px) {
     .coldate { display: none; }
@@ -37,7 +44,7 @@
   <p class="sub">Each book costs {{ money(price) }}. Payments are in Stripe test mode, so no real money moves.</p>
 
   <div class="top">
-    <div class="card">
+    <div class="card balcard">
       <div class="label">Balance</div>
       <div class="balance">{{ money(balance) }}</div>
       <div class="detail">Enough for {{ balance // price }} book{{ '' if balance // price == 1 else 's' }}.</div>
@@ -87,7 +94,7 @@
     <p class="hint">Printed by Lulu as a 6 × 9 inch full-color hardcover. Test mode: orders go to Lulu's sandbox.</p>
   </div>
 
-  <h2 style="font-family:Georgia,serif; margin:0 0 10px">History</h2>
+  <h2 style="margin:0 0 12px">History</h2>
   {% if not txns %}
     <div class="card"><p style="margin:0">No transactions yet. Add funds to make your first book.</p></div>
   {% else %}

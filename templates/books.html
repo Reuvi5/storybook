@@ -1,43 +1,73 @@
 {% extends "base.html" %}
+{% block title %}My books · Storybook{% endblock %}
 {% block style %}
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 24px; }
-  .item:hover .thumb { transform: translateY(-2px); }
-  .item { text-decoration: none; color: var(--ink); }
-  .thumb { aspect-ratio: 2 / 3; border-radius: 10px; overflow: hidden; background: #e9e0cf; box-shadow: var(--shadow); transition: transform .15s; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; text-align: center; }
-  .thumb img { width: 100%; height: 100%; object-fit: cover; }
-  .name { font-family: var(--serif); font-weight: 600; margin-top: 10px; line-height: 1.25; }
-  .story { font-size: 13px; color: var(--muted); }
-  .meta { font-size: 13px; color: var(--muted); }
-  .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 10px; background: #eee3cc; margin-left: 4px; }
-  .tag { font-weight: 500; }
-  .tag.done { background: var(--accent-soft); color: var(--accent); }
-  .tag.bad { background: #fde8e8; color: #8a1c1c; }
+  .top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
+  .top .sub { margin: 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 30px 26px; }
+  @media (max-width: 480px) { .grid { grid-template-columns: 1fr 1fr; gap: 22px 16px; } }
+  .item { text-decoration: none; color: var(--ink); display: block; }
+  .thumb { position: relative; aspect-ratio: 2 / 3; border-radius: 5px 14px 14px 5px; overflow: hidden; background: #ece4d6; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; font-weight: 700; text-align: center; padding: 0;
+           box-shadow: inset 6px 0 0 rgba(0,0,0,.16), inset 8px 0 0 rgba(255,255,255,.14), 0 14px 28px rgba(31,32,65,.18), 0 3px 8px rgba(31,32,65,.10); transition: transform .2s ease, box-shadow .2s ease; }
+  .thumb::after { content: ""; position: absolute; inset: 0; box-shadow: inset 6px 0 0 rgba(0,0,0,.16), inset 8px 0 0 rgba(255,255,255,.14); border-radius: inherit; pointer-events: none; }
+  .item:hover .thumb { transform: translateY(-5px) rotate(-1.5deg); box-shadow: 0 22px 36px rgba(31,32,65,.22), 0 4px 10px rgba(31,32,65,.12); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb .spin { width: 30px; height: 30px; border: 4px solid #d9d0f7; border-top-color: var(--brand); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .thumb.jack { background: #2e5c38; }
+  .thumb.red { background: #8c1f1f; }
+  .thumb.plain { background: #ece4d6; flex-direction: column; }
+  .flag { position: absolute; left: 14px; top: 10px; z-index: 2; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15); }
+  .flag.done { color: var(--good); }
+  .flag.wait { color: #8a5a00; background: var(--sun-soft); }
+  .flag.bad { color: var(--danger); }
+  .name { font-family: var(--serif); font-weight: 600; font-size: 19px; margin-top: 14px; line-height: 1.2; }
+  .story { font-size: 14px; color: var(--muted); font-weight: 600; }
+  .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .new { border: 2.5px dashed #cfc6f5; background: linear-gradient(180deg, #faf9ff, #f1edff); box-shadow: none; flex-direction: column; gap: 12px; color: var(--brand); }
+  .new::after { display: none; }
+  .new .plus { width: 54px; height: 54px; border-radius: 18px; background: var(--brand); color: #fff; font: 700 32px/1 var(--serif); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 0 var(--brand-dark); transform: rotate(-6deg); }
+  .item:hover .new { transform: translateY(-5px); box-shadow: none; border-color: var(--brand); }
+  .empty { text-align: center; padding: 48px 26px; max-width: 560px; margin: 0 auto; }
+  .empty .art { width: 96px; height: 96px; margin: 0 auto 16px; }
+  .empty h2 { font-size: 26px; margin-bottom: 6px; }
+  .empty p { color: var(--muted); margin: 0 0 22px; }
 {% endblock %}
 {% block content %}
-  <h1>My books</h1>
-  <p class="sub">Every book you make is saved here.</p>
+  <div class="top">
+    <div>
+      <h1>My books</h1>
+      <p class="sub">Every book you make is saved here.</p>
+    </div>
+    {% if books %}<a class="btn" href="{{ url_for('index') }}">+ New book</a>{% endif %}
+  </div>
   {% if not books %}
-    <div class="card">
-      <p style="margin-top:0">You haven't made any books yet.</p>
+    <div class="card empty">
+      <svg class="art" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="20" fill="#efecff"/><path d="M12 20c7-3 14-3 20 2v26c-6-5-13-5-20-2z" fill="#5b47e0"/><path d="M52 20c-7-3-14-3-20 2v26c6-5 13-5 20-2z" fill="#8f80ff"/><path d="M47 7l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z" fill="#ffc845"/></svg>
+      <h2>Your bookshelf is empty</h2>
+      <p>Make your first storybook: pick a story, add a photo, and watch the pages appear.</p>
       <a class="btn" href="{{ url_for('index') }}">Make your first book</a>
     </div>
   {% else %}
     <div class="grid">
       {% for b in books %}
         <a class="item" href="{{ url_for('book', book_id=b.book_id) }}">
-          <div class="thumb">
-            {% if b.cover_url %}<img src="{{ b.cover_url }}" alt="{{ b.details.name }}'s character" loading="lazy">{% elif b.status == 'failed' %}Couldn't be made{% else %}Drawing...{% endif %}
+          <div class="thumb {{ 'plain' if not b.cover_url else '' }}">
+            {% if b.status == 'done' %}<span class="flag done">Ready</span>
+            {% elif b.status == 'generating' %}<span class="flag wait">Drawing</span>
+            {% elif b.status == 'needs_retry' %}<span class="flag bad">Needs retry</span>
+            {% else %}<span class="flag bad">Failed</span>{% endif %}
+            {% if b.cover_url %}<img src="{{ b.cover_url }}" alt="{{ b.details.name }}'s character" loading="lazy">
+            {% elif b.status == 'failed' %}<span>Couldn't be made</span>
+            {% else %}<div><div class="spin"></div>Drawing...</div>{% endif %}
           </div>
           <div class="name">{{ b.details.name }}</div>
           <div class="story">{{ b.title }}</div>
-          <div class="meta">{{ b.created_text }}
-            {% if b.status == 'done' %}<span class="tag done">Ready</span>
-            {% elif b.status == 'generating' %}<span class="tag">Drawing</span>
-            {% elif b.status == 'needs_retry' %}<span class="tag bad">Needs retry</span>
-            {% else %}<span class="tag bad">Failed</span>{% endif %}
-          </div>
+          <div class="meta">{{ b.created_text }}</div>
         </a>
       {% endfor %}
+      <a class="item" href="{{ url_for('index') }}">
+        <div class="thumb new"><div class="plus">+</div><span>Make a new book</span></div>
+      </a>
     </div>
   {% endif %}
 {% endblock %}

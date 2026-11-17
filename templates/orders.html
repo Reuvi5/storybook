@@ -3,13 +3,13 @@
 {% block style %}
   .list { display: grid; gap: 14px; max-width: 820px; }
   .order { display: grid; grid-template-columns: 1fr auto; gap: 6px 16px; }
-  .order h2 { font-size: 19px; margin: 0; }
+  .order h2 { font-size: 20px; margin: 0; }
   .meta { color: var(--muted); font-size: 14px; }
-  .status { justify-self: end; align-self: start; font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 99px; background: #eee3cc; white-space: nowrap; }
-  .status.good { background: var(--accent-soft); color: var(--accent); }
+  .status { justify-self: end; align-self: start; font-size: 13px; font-weight: 800; padding: 4px 12px; border-radius: 99px; background: var(--sun-soft); color: #7a5600; white-space: nowrap; }
+  .status.good { background: var(--good-soft); color: var(--good); }
   .status.bad { background: var(--danger-soft); color: var(--danger); }
   .rows { grid-column: 1 / -1; display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; font-size: 14px; margin-top: 8px; }
-  .rows dt { color: var(--muted); }
+  .rows dt { color: var(--muted); font-weight: 700; }
   .rows dd { margin: 0; }
 {% endblock %}
 {% block content %}
