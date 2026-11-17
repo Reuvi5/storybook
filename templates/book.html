@@ -45,8 +45,29 @@
   @media (max-width: 480px) { .pages { grid-template-columns: 1fr 1fr; gap: 18px 12px; } }
   .pages > .page { min-width: 0; }
   .frame { min-width: 0; }
-  a.frame { transition: transform .15s; }
-  a.frame:hover { transform: translateY(-3px); }
+  .pages .frame { cursor: zoom-in; transition: transform .15s, box-shadow .15s; }
+  .pages .frame:hover { transform: translateY(-3px); box-shadow: 0 14px 30px rgba(31,32,65,.16); }
+  .pages .frame:focus-visible { outline: 3px solid var(--sun); outline-offset: 3px; }
+
+  /* the reader: one page large, exactly as printed */
+  .reader { position: fixed; inset: 0; z-index: 50; background: rgba(24,22,48,.86); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: none; align-items: center; justify-content: center; padding: 56px 72px 64px; }
+  .reader.open { display: flex; }
+  .reader .sheet { width: min(calc((100vh - 130px) * 2 / 3), 100%); max-width: 640px; }
+  .reader .sheet .frame { width: 100%; cursor: default; box-shadow: 0 24px 60px rgba(0,0,0,.45); border-radius: 14px; }
+  .reader .sheet .frame:hover { transform: none; }
+  .reader .rcap { color: #fff; text-align: center; font-weight: 800; margin-top: 14px; font-size: 15px; }
+  .reader .rcap span { opacity: .7; font-weight: 600; }
+  .reader button { position: absolute; border: 0; cursor: pointer; background: #fff; color: var(--ink); width: 48px; height: 48px; border-radius: 50%; font: 700 24px/1 var(--serif); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 0 rgba(0,0,0,.25); }
+  .reader button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+  .reader button:disabled { opacity: .3; cursor: default; }
+  .reader .prev { left: 14px; top: 50%; margin-top: -24px; }
+  .reader .next { right: 14px; top: 50%; margin-top: -24px; }
+  .reader .close { right: 14px; top: 12px; width: 42px; height: 42px; font-size: 22px; }
+  @media (max-width: 600px) {
+    .reader { padding: 60px 12px 92px; }
+    .reader .prev, .reader .next { top: auto; bottom: 18px; margin-top: 0; }
+    .reader .prev { left: calc(50% - 60px); } .reader .next { right: calc(50% - 60px); }
+  }
   .page { margin: 0; }
   .frame { position: relative; aspect-ratio: 2 / 3; border-radius: 12px; overflow: hidden; background: #fcf5e3; box-shadow: var(--shadow); container-type: inline-size; }
   .frame > img.full { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -162,7 +183,7 @@
         {% set bx, by, bw, bh = cover.box %}
         <div class="frame cover" style="--cover: {{ '#2e5c38' if story.id == 'jack' else '#8c1f1f' }}">
           {% for line in cover.lines %}<div class="tl" style="top: {{ (64 + 40 * loop.index0 - 25) / H * 100 }}%">{{ line }}</div>{% endfor %}
-          <img src="{{ images[0].full }}" alt="{{ values.name }} as {{ story.hero_name }}" style="left:{{ bx / W * 100 }}%; bottom:{{ by / H * 100 }}%; width:{{ bw / W * 100 }}%; height:{{ bh / H * 100 }}%">
+          <img src="{{ images[0].full }}" data-full="{{ images[0].full }}" alt="{{ values.name }} as {{ story.hero_name }}" style="left:{{ bx / W * 100 }}%; bottom:{{ by / H * 100 }}%; width:{{ bw / W * 100 }}%; height:{{ bh / H * 100 }}%">
           <div class="star">starring {{ values.name }}</div>
         </div>
         <figcaption class="cap"><span>Cover</span><span class="q {{ '' if images[0].passed else 'best' }}">{{ images[0].state }}</span></figcaption>
@@ -179,17 +200,17 @@
         {% set L = img.layout %}
         {% set x, y, w, h = L.rect %}
         <figure class="page">
-          <a class="frame" href="{{ img.full }}" target="_blank" style="display:block">
+          <div class="frame">
             {% if L.mode == 'band' %}
               {% set ax, ay, aw, ah = L.art_rect %}
-              <img class="band" src="{{ img.thumb }}" alt="Page {{ loop.index }}" style="left:{{ ax / W * 100 }}%; bottom:{{ ay / H * 100 }}%; width:{{ aw / W * 100 }}%; height:{{ ah / H * 100 }}%">
+              <img class="band" src="{{ img.thumb }}" data-full="{{ img.full }}" alt="Page {{ loop.index }}" style="left:{{ ax / W * 100 }}%; bottom:{{ ay / H * 100 }}%; width:{{ aw / W * 100 }}%; height:{{ ah / H * 100 }}%">
             {% else %}
-              <img class="full" src="{{ img.thumb }}" alt="Page {{ loop.index }}">
+              <img class="full" src="{{ img.thumb }}" data-full="{{ img.full }}" alt="Page {{ loop.index }}">
             {% endif %}
             <div class="txt {{ L.theme }}" style="left:{{ x / W * 100 }}%; bottom:{{ y / H * 100 }}%; width:{{ w / W * 100 }}%; height:{{ h / H * 100 }}%; font-size:{{ L.size / W * 100 }}cqw">
               {% for line in L.lines %}<div>{{ line }}</div>{% endfor %}
             </div>
-          </a>
+          </div>
           <figcaption class="cap"><span>Page {{ loop.index }}</span>
             <span class="q {{ '' if img.passed or not img.attempt else 'best' }}" title="Quality check: up to {{ 3 }} tries">{{ img.state }}</span>
           </figcaption>
@@ -217,9 +238,54 @@
       </figure>
     </div>
   {% endif %}
+  {% if book.status == 'done' %}
+  <div class="reader" id="reader" role="dialog" aria-modal="true" aria-label="Read the book">
+    <button class="close" id="rclose" aria-label="Close">&times;</button>
+    <button class="prev" id="rprev" aria-label="Previous page">&lsaquo;</button>
+    <div class="sheet"><div id="rslot"></div><div class="rcap" id="rcap"></div></div>
+    <button class="next" id="rnext" aria-label="Next page">&rsaquo;</button>
+  </div>
+  {% endif %}
 {% endblock %}
 {% block script %}
 <script>
+  // The reader: click any page to see it large, exactly as it is printed, and flip with the arrows.
+  (function () {
+    const reader = document.getElementById('reader');
+    if (!reader) return;
+    const frames = [...document.querySelectorAll('.pages .frame')];
+    const slot = document.getElementById('rslot'), cap = document.getElementById('rcap');
+    const prev = document.getElementById('rprev'), next = document.getElementById('rnext');
+    let at = 0, opener = null;
+    function show(i) {
+      at = Math.max(0, Math.min(frames.length - 1, i));
+      const copy = frames[at].cloneNode(true);
+      copy.removeAttribute('tabindex'); copy.removeAttribute('role');
+      copy.querySelectorAll('img[data-full]').forEach(im => { im.src = im.dataset.full; });
+      slot.replaceChildren(copy);
+      const label = frames[at].closest('figure').querySelector('.cap span');
+      cap.innerHTML = (label ? label.textContent : '') + ' <span>· ' + (at + 1) + ' of ' + frames.length + '</span>';
+      prev.disabled = at === 0; next.disabled = at === frames.length - 1;
+    }
+    function open(i) { opener = document.activeElement; show(i); reader.classList.add('open'); document.body.style.overflow = 'hidden'; next.focus(); }
+    function close() { reader.classList.remove('open'); document.body.style.overflow = ''; if (opener) opener.focus(); }
+    frames.forEach((f, i) => {
+      f.tabIndex = 0; f.setAttribute('role', 'button'); f.setAttribute('aria-label', 'Open this page');
+      f.addEventListener('click', () => open(i));
+      f.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(i); } });
+    });
+    prev.addEventListener('click', () => show(at - 1));
+    next.addEventListener('click', () => show(at + 1));
+    document.getElementById('rclose').addEventListener('click', close);
+    reader.addEventListener('click', e => { if (e.target === reader) close(); });
+    document.addEventListener('keydown', e => {
+      if (!reader.classList.contains('open')) return;
+      if (e.key === 'Escape') close();
+      if (e.key === 'ArrowLeft') show(at - 1);
+      if (e.key === 'ArrowRight') show(at + 1);
+    });
+  })();
+
   const retry = document.getElementById('retry');
   if (retry) retry.addEventListener('submit', () => {
     const b = document.getElementById('retrybtn'); b.disabled = true; b.textContent = 'Starting...';

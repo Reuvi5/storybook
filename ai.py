@@ -248,7 +248,7 @@ REGION_RULES = """"regions": a list of boxes for everything the reader needs to 
 
 
 def inspect_page(page_png: bytes, scene: str, text: str, hero_png: bytes = None, cast_note: str = "",
-                 hero_note: str = None, meter: Meter = None) -> dict:
+                 hero_note: str = None, meter: Meter = None, face_png: bytes = None) -> dict:
     """Score a finished page. Returns {"score", "passed", "problems", "regions", ...}."""
     if FAKE:
         if meter:
@@ -257,6 +257,7 @@ def inspect_page(page_png: bytes, scene: str, text: str, hero_png: bytes = None,
     hero_part = (
         "Image 2 is the hero's official character design. The hero in image 1 must be the same character "
         "(same face, hair, skin tone, any head covering, outfit)."
+        + (" Image 3 is a close-up of the hero's face from that design." if hero_png and face_png else "")
         if hero_png else (hero_note or "The hero does not appear on this page.")
     )
     instructions = f"""You are a strict quality inspector for a children's picture book. Image 1 is one illustrated page.
@@ -271,8 +272,15 @@ Inspect image 1 carefully and reply with JSON only:
   "hero_present": true/false,
   "hero_matches_design": 0-10 (10 = clearly the same character as image 2; 0 if no hero is needed),
   "hero_face_clear": true/false (face visible, lit, large enough to recognize; true if no hero is needed),
+  "hero_face_same": 0-10 (compare the hero's face in image 1 with the design's face{' in image 3' if face_png else ''}: same face shape,
+                    eye shape and color, eyebrows, nose, mouth, hairline, hair color and style, apparent age. 10 = the same
+                    character model, 5 = a sibling or look-alike, 0 = someone else. Be strict. 10 if no hero is needed),
+  "hero_arms": number (count the hero's arms you can actually see, one by one, following each from the shoulder
+               to the hand; 0 if no hero is needed),
+  "extra_limbs": true/false (does ANY character have more than two arms, more than two legs, more than two hands,
+                 or a hand or arm that is not attached to a shoulder? Count carefully; true if so),
   "scene_matches": 0-10 (does the picture show what the scene and the words describe, including any counts),
-  "anatomy_ok": true/false (no extra or missing limbs or fingers, no melted or merged faces or bodies),
+  "anatomy_ok": true/false (no extra or missing limbs, hands or fingers, no melted or merged faces or bodies),
   "cartoon_style": true/false (the WHOLE image, every face included, is a stylized 3D animated cartoon with large
                    simplified cartoon eyes and smooth skin; false if any face looks photorealistic: realistic
                    eyes, skin texture or teeth),
@@ -282,13 +290,17 @@ Inspect image 1 carefully and reply with JSON only:
   {ZONE_RULES},
   {REGION_RULES}
 }}"""
-    images = [page_png] + ([hero_png] if hero_png else [])
+    images = [page_png] + ([hero_png] if hero_png else []) + ([face_png] if hero_png and face_png else [])
     r = _ask(instructions, images, meter)
     hero_needed = hero_png is not None
+    arms = _number(r.get("hero_arms"))
     r["passed"] = bool(
         r.get("score", 0) >= 7
         and r.get("scene_matches", 0) >= 6
         and r.get("anatomy_ok", False)
+        and not r.get("extra_limbs", False)
+        and (not hero_needed or arms is None or arms <= 2)
+        and (not hero_needed or _number(r.get("hero_face_same")) is None or _number(r.get("hero_face_same")) >= 7)
         and r.get("cartoon_style", True)
         and not r.get("has_written_text", True)
         and (not hero_needed or (r.get("hero_present") and r.get("hero_face_clear") and r.get("hero_matches_design", 0) >= 7))
@@ -343,6 +355,36 @@ Reply with JSON only:
     )
     r["regions"] = _clean_regions(r.get("regions"))
     return r
+
+
+def _number(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def locate_hero_head(scene_jpg: bytes, standin_jpg: bytes, meter: Meter = None):
+    """Box [x0, y0, x1, y1] (0-1000, from the top-left) around the stand-in hero's whole head in a pre-drawn
+    scene, or None. Used to hide the stand-in's face, so a book's pages copy the child's face, not hers."""
+    if FAKE:
+        return [380.0, 120.0, 620.0, 330.0]
+    r = _ask(
+        "Image 1 is a picture-book illustration. Image 2 is the character design of its hero. Find the hero (the "
+        "character from image 2) in image 1. Give one box around the hero's WHOLE head: all of the hair, ears and "
+        "chin, and any hat, hood or head covering, in coordinates from 0 to 1000 across image 1's width (x) and "
+        "height (y), measured from the TOP-LEFT corner (the faint grid on image 1 shows them).\n"
+        'Reply with JSON only: {"found": true/false, "box": [x0, y0, x1, y1]}',
+        [scene_jpg, standin_jpg], meter)
+    if not r.get("found"):
+        return None
+    boxes = _clean_regions([{"box": r.get("box")}])
+    if not boxes:
+        return None
+    x0, y0, x1, y1 = boxes[0]["box"]
+    if (x1 - x0) > 600 or (y1 - y0) > 600:  # not a head
+        return None
+    return [x0, y0, x1, y1]
 
 
 def _clean_regions(regions) -> list:

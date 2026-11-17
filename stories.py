@@ -142,7 +142,11 @@ STORIES["red"] = {
     "id": "red",
     "title": "Little Red Riding Hood",
     "hero_name": "Little Red Riding Hood",
-    "hero_outfit": "a bright red hooded cape tied at the neck, with the hood down so the face and hair are fully visible, over a cream linen shirt, brown trousers, and brown leather boots",
+    "hero_outfit": ("a bright red hooded cape tied at the neck, with the hood down so the face and hair are fully visible. "
+                    "Under the cape: if the child is a girl, a simple knee-length storybook dress (a cream blouse with "
+                    "puffed sleeves under a laced dark-red pinafore skirt), white stockings and brown leather Mary Jane "
+                    "shoes; NOT trousers or pants. If the child is a boy, a cream linen shirt, brown trousers and brown "
+                    "leather boots"),
     "standin": "a friendly young girl of about ten with shoulder-length brown hair",
     "bible": {
         "mother": "The mother: a cheerful woman in her thirties with dark curly hair tied back, a green dress and a white apron.",
@@ -310,15 +314,24 @@ def hero_prompt(s: dict) -> str:
     )
 
 
-def swap_prompt(s: dict, page: dict) -> str:
-    """Per book: put the user's hero into a pre-drawn scene. Image 1 = scene, image 2 = hero."""
+def swap_prompt(s: dict, page: dict, head_hidden: bool = False) -> str:
+    """Per book: put the user's hero into a pre-drawn scene. Image 1 = scene, image 2 = hero, image 3 = face."""
+    hidden = (
+        "The hero's head in image 1 has been blurred out on purpose. Draw the hero's whole head, face and hair "
+        "there from images 2 and 3, at the same size, angle and position as the blurred head. Nothing may stay "
+        "blurry, and nothing of the old face may remain.\n\n" if head_hidden else "")
     return (
         f"{STYLE}\n\n"
         "Image 1 is a finished picture-book illustration. Image 2 is the hero's official character design. "
         "Image 3 is a close-up of the hero's face from that design.\n\n"
+        + hidden +
         "Replace the hero in image 1 with the character from image 2: same hair, skin tone, any head covering, "
         "body proportions and outfit as image 2, in exactly the same position, pose, size, expression and lighting as "
-        "the hero in image 1.\n\n"
+        "the hero in image 1. The clothes must be image 2's clothes: if the hero in image 1 is dressed differently "
+        "(for example trousers instead of a dress), redraw their clothes to match image 2.\n\n"
+        "ARMS AND HANDS: keep the hero's body pose from image 1 exactly, including where each arm and hand is. The "
+        "hero has exactly TWO arms and TWO hands. Never add an arm or a hand, and do not copy the arm pose of image 2 "
+        "(image 2 only shows what the hero looks like, not how they stand).\n\n"
         "THE FACE MUST MATCH IMAGE 3 EXACTLY, as if it were the same 3D character model: same face shape, eye shape "
         "and color, eyebrows, nose, mouth, ears, cheeks, freckles, hairline, hair color and curls, and the same apparent "
         "age. Do not redesign, simplify, age up or age down the face. It must stay clearly visible, front-lit and "

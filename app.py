@@ -90,6 +90,24 @@ init_auth(app)
 app.register_blueprint(wallet.bp)
 app.register_blueprint(orders.bp)
 
+
+def _find_stand_in_heads():
+    """Once, in the background: find where the stand-in's head is in every pre-drawn scene (saved, so this
+    is a quick read on every later start). Pages blur it out so they copy the child's face, not hers."""
+    for s in stories.STORIES.values():
+        try:
+            if not assets.story_ready(storage, s["id"]):
+                continue
+            for p in s["pages"]:
+                assets.hero_head(storage, s["id"], p["number"])
+        except Exception:  # noqa: BLE001 - pages fall back to finding it themselves
+            log.exception("stand_in_heads_failed story=%s", s["id"])
+
+
+if os.environ.get("OPENAI_API_KEY") or ai.FAKE:
+    import threading
+    threading.Thread(target=_find_stand_in_heads, name="stand-in-heads", daemon=True).start()
+
 # Each user can start this many books per hour (failed books don't count).
 BOOKS_PER_HOUR = int(os.environ.get("BOOKS_PER_HOUR", 3))
 

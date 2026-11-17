@@ -361,17 +361,19 @@ def _make_page(storage, user_id, book_id, s, number, refs, meter, cancel=None):
             check = {"score": plate["score"], "passed": plate["passed"], "problems": plate["problems"], "regions": []}  # zones come from the plate below
         else:
             cast_note = ("Characters who should appear: " + "; ".join(s["bible"][c] for c in page["cast"])) if page["cast"] else ""
+            scene_jpg, head_hidden = assets.scene_without_face(storage, s["id"], number, meter)
             def make():
                 if cancel is not None and cancel.is_set():
                     raise assets.Cancelled()
-                return ai.draw(stories.swap_prompt(s, page),
-                                [("scene.jpg", plate["jpeg_bytes"], "image/jpeg"), ("hero.jpg", refs["jpg"], "image/jpeg"),
+                return ai.draw(stories.swap_prompt(s, page, head_hidden),
+                                [("scene.jpg", scene_jpg, "image/jpeg"), ("hero.jpg", refs["jpg"], "image/jpeg"),
                                  ("face.jpg", refs["face"], "image/jpeg")],
                                 PAGE_QUALITY, f"{s['id']} page {number}", meter, fmt="jpeg")
 
             png, check, tries = assets.draw_checked(
                 make,
-                lambda img: ai.inspect_page(img, page["scene"], page["text"], refs["jpg"], cast_note, meter=meter),
+                lambda img: ai.inspect_page(img, page["scene"], page["text"], refs["jpg"], cast_note, meter=meter,
+                                            face_png=refs["face"]),
                 f"{book_id}/{name}",
                 on_attempt=_progress(storage, user_id, book_id, name),
             )

@@ -17,7 +17,7 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 import ai
 import stories
@@ -126,6 +126,69 @@ def plate(storage, story_id, number) -> dict:
 def clear_cache():
     with _cache_lock:
         _cache.clear()
+
+
+def hero_head(storage, story_id, number, meter=None):
+    """Where the stand-in hero's head is in a pre-drawn scene (0-1000 box), or None. Found once per scene
+    with one cheap vision call and saved (HEAD#nn), so later books just read it."""
+    rec = plate(storage, story_id, number)
+    if not rec.get("hero"):
+        return None
+    saved = storage.get_record(pk(story_id), f"HEAD#{number:02d}")
+    if saved and saved.get("plate_made_at") == rec.get("made_at") and saved.get("fake", False) == ai.FAKE:
+        return saved.get("box") or None
+    standin = storage.get_record(pk(story_id), "BIBLE#hero")
+    standin_jpg = storage.get_blob(standin["jpeg"]) if standin and standin.get("jpeg") else None
+    if not standin_jpg:
+        return None
+    try:
+        box = ai.locate_hero_head(rec["jpeg_bytes"], standin_jpg, meter)
+    except Exception:  # noqa: BLE001 - without the box the page is still drawn, just from the plain scene
+        log.exception("hero_head_failed story=%s page=%s", story_id, number)
+        return None
+    storage.put_record(pk(story_id), f"HEAD#{number:02d}", {
+        "box": [round(v, 1) for v in box] if box else [], "plate_made_at": rec.get("made_at"),
+        "made_at": int(time.time()), "fake": ai.FAKE})
+    log.info("hero_head_found story=%s page=%s box=%s", story_id, number, box)
+    return box
+
+
+def scene_without_face(storage, story_id, number, meter=None):
+    """The pre-drawn scene with the stand-in's head blurred out (cached), and whether it was hidden.
+    Every page used to copy a little of the stand-in's face, so all of a book's pages looked like the
+    same slightly-wrong child. With her face gone, the only face to copy is the child's."""
+    cache_key = ("noface", story_id, number)
+    with _cache_lock:
+        if cache_key in _cache:
+            return _cache[cache_key]
+    rec = plate(storage, story_id, number)
+    box = hero_head(storage, story_id, number, meter)
+    result = (rec["jpeg_bytes"], False)
+    if box:
+        with ai.IMAGE_WORK:
+            result = (_blur_box(rec["jpeg_bytes"], box), True)
+    with _cache_lock:
+        _cache[cache_key] = result
+    return result
+
+
+def _blur_box(jpg: bytes, box) -> bytes:
+    """Blur an oval around box (0-1000 coords) so strongly that no facial features are left, with soft edges.
+    Keeps the head's place, size, colors and lighting, so the new face lands in exactly the same spot."""
+    from PIL import ImageFilter
+    img = Image.open(io.BytesIO(jpg)).convert("RGB")
+    w, h = img.size
+    x0, y0, x1, y1 = box[0] / 1000 * w, box[1] / 1000 * h, box[2] / 1000 * w, box[3] / 1000 * h
+    pad_x, pad_y = (x1 - x0) * 0.12, (y1 - y0) * 0.12
+    x0, y0, x1, y1 = max(0, x0 - pad_x), max(0, y0 - pad_y), min(w, x1 + pad_x), min(h, y1 + pad_y)
+    blurred = img.filter(ImageFilter.GaussianBlur(radius=max(12, (x1 - x0) / 7)))
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).ellipse([x0, y0, x1, y1], fill=255)
+    mask = mask.filter(ImageFilter.GaussianBlur(radius=max(6, (x1 - x0) / 14)))
+    img.paste(blurred, (0, 0), mask)
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", quality=90)
+    return buf.getvalue()
 
 
 # ---------------------------------------------------------------------------
