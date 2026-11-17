@@ -99,7 +99,7 @@ def _readable(r) -> str:
 def cover_dimensions(page_count: int) -> tuple:
     """The exact one-piece cover size (points) for this product and page count."""
     if FAKE:
-        return 990.0, 756.0
+        return 1008.0, 774.0   # what the sandbox returned for 24 pages
     data = _call("POST", "/cover-dimensions/", {"pod_package_id": POD_PACKAGE_ID, "interior_page_count": page_count, "unit": "pt"})
     return float(data["width"]), float(data["height"])
 
@@ -117,7 +117,7 @@ def lulu_address(a: dict) -> dict:
 def quote(address: dict, page_count: int, level: str = SHIPPING_LEVEL) -> dict:
     """What Lulu will charge us for one book shipped to this address (dollars)."""
     if FAKE:
-        return {"currency": "USD", "printing": 13.84, "shipping": 4.99, "fulfillment": 0.75, "tax": 0.0, "total": 19.58}
+        return {"currency": "USD", "printing": 14.01, "shipping": 5.69, "fulfillment": 0.75, "tax": 1.54, "total": 21.99}
     data = _call("POST", "/print-job-cost-calculations/", {
         "line_items": [{"pod_package_id": POD_PACKAGE_ID, "page_count": page_count, "quantity": 1}],
         "shipping_address": lulu_address(address), "shipping_option": level,

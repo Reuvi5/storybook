@@ -14,6 +14,7 @@ Order records live with the user's data: DynamoDB sk "ORDER#<id>".
 
 import hashlib
 import logging
+import os
 import re
 import time
 
@@ -29,6 +30,8 @@ from storage import book_key
 
 log = logging.getLogger("storybook.orders")
 bp = Blueprint("orders", __name__)
+# What has to be left after Lulu is paid: Stripe fee on the price (~$1.31) + the book's AI cost (~$0.70) + a little profit.
+MIN_MARGIN_USD = float(os.environ.get("PRINT_MIN_MARGIN_USD", "5.00"))
 
 US_STATES = ("AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC "
              "ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY").split()
@@ -178,6 +181,11 @@ def place_order(book_id):
         cost = printing.quote(address, info["page_count"])
     except printing.LuluError as e:
         return again(f"The printer couldn't price this address: {e}")
+    # Never sell at a loss: the fixed price has to cover Lulu's quote plus card fees and the book's AI cost.
+    if cost["total"] > price / 100 - MIN_MARGIN_USD:
+        log.warning("print_quote_too_high user=%s quote=%.2f price=%.2f", user["id"], cost["total"], price / 100)
+        return again("Printing and shipping to this address costs more than our flat price covers, so we can't "
+                     "ship there yet. Nothing was charged.")
 
     order_id = printing.new_order_id()
     title = f"{s['title']}, starring {b['details']['name']}"
