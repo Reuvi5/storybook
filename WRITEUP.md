@@ -1,6 +1,7 @@
 # Make it a real book — write-up
 
 Live site: https://storybook.kupchikgames.shop · Repo: https://github.com/Reuvi5/storybook
+Sample book the app produced: [samples/deens-Little-Red-Riding-Hood.pdf](samples/deens-Little-Red-Riding-Hood.pdf) · Review: [review-log.md](review-log.md) (run 3) · Open defects: [to-do.md](to-do.md)
 
 ## What I built
 
@@ -32,6 +33,16 @@ Live site: https://storybook.kupchikgames.shop · Repo: https://github.com/Reuvi
 If a check can't run, the book is refused rather than printed unchecked. Each error shows under the field it belongs to.
 - *Pass:* "Sarah", "José María", "Zoë O'Brien-Smith" and "李明".
 - *Rejected:* "Stupid", "Big Loser", "asdf", "Bob123", a phone number and a link.
+
+**Better pictures (found by testing this week).**
+- *The child looked different in the book than on the About Me cartoon.* Every page starts from a scene drawn ahead of time with a stand-in child, and the stand-in's face leaked into every page, so the pages matched each other but not the child. Now the stand-in's head is blurred out of the scene before the child is drawn in (where her head is was found once per scene and saved), so the only face to copy is the child's.
+- *A page had a girl with three arms.* The page drawing now has to keep the scene's pose with exactly two arms, and the page check counts the hero's arms and checks every character for extra limbs. It also compares the face with a close-up of the child's cartoon and redraws a look-alike. Run 3's book: same child as the cartoon on every page, no extra arms.
+- Little Red Riding Hood now wears a dress under the cape (boys keep the shirt and trousers).
+- Names typed in lowercase are capitalized on the cover ("deens" → "Deens").
+
+**A friendlier, more professional site.** New look on every page: rounded fonts, a violet, yellow and coral palette, chunky buttons, a logo, and a real landing page (headline, the two books, how it works, sample pages, both prices). Books show as book covers on a shelf, the progress bar is animated, and the wallet balance is a card. Clicking a page opens a reader that shows it large, exactly as printed, with arrows to flip through. Everything works at phone width.
+
+**Review.** `storybook-review` run 3 is in `review-log.md`: the new PDF scored 40/40 on the PDF section (24 pages, no text over any face, the same child throughout, real type). The browser half wasn't rerun, so no total; runs 1 and 2 scored 86 and 96.
 
 ## Business model
 
@@ -71,6 +82,6 @@ Everything from "Charge for the book" still works:
 - The cost tracking.
 - The shared 20-page template.
 - The quality loop with up to 3 tries.
-- Under 60 seconds.
+- About a minute from upload to PDF (59 s in run 2).
 
-The review was rerun and appended to `review-log.md`.
+The review was rerun and appended to `review-log.md` (run 3).

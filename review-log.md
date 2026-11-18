@@ -61,3 +61,31 @@ Fix first:
 3. Re-check phone width (400 px), which wasn't measured this run (UI, 2 not measured).
 4. Make one Red Riding Hood book with an unused photo before the instructor does: this run checked only Jack end to end.
 5. Two re-laid-out Jack pages (9, 12) use 13 pt text to fit a clear spot; fine, but the smallest in the book (PDF, 0 now).
+
+## Run 3 — 2026-11-17 — reviewer: self (Claude) — browser: none (desk review of the builder's new book)
+Total: not produced. This run reviewed the PDF and the repo only, so per the rubric no total is given.
+Measured: PDF 40/40 · Money 3/3 of the desk lines · Engineering 7/7 of the desk lines · UI not measured
+Upload → PDF: not measured (the builder made the book; the PDF was built 2026-11-17 18:42:31 UTC by its own metadata)
+Balance: not measured
+Avg cost per book: not measured this run (run 2: $0.700 over 2 books, price $0.99; the Wallet still shows it, code unchanged)
+Not measured: every [browser] line — UI 20, Money 17 (fund, deduct $0.99, refuse when short, refund, history), Engineering 13 (under 60 s, sign out and back in, attempt count visible) — and the history-reconciles line (1). Jack and the Beanstalk was not regenerated, so the two-PDF lines are judged on the new Red Riding Hood book plus the shared code.
+Photo: a child not used in development ("deens").
+Changed since run 2:
+- It's a real book now: front cover ("starring" the name), a copyright page (© 2026 Kupchik Games, publisher, edition, book ID), 20 story pages starting right after it, "The End", and an About Me back cover. 24 pages in all.
+- Print and ship through Lulu's print API (sandbox only): the user approves the exact print files, then enters a US address; the order is quoted, charged ($34.99), and refunded automatically if Lulu rejects it.
+- The name and About Me details are checked before anything is charged or printed (rules, OpenAI moderation, and a GPT check for insults and fake names).
+- Pages no longer copy the stand-in's face: her head is blurred out of each pre-drawn scene before the child is drawn in. The page check now counts the hero's arms and compares the face with a close-up of the child's cartoon.
+- Red Riding Hood wears a dress (girls) under the cape.
+- New kid-friendly design across the site, and a page reader (click a page to see it large, as printed).
+- Names typed in lowercase are capitalized (fixed after this run's finding below).
+
+Evidence by section
+- PDF (Little Red Riding Hood, starring deens; 24 pages at 432 x 648 pt): p. 1 front cover with title, the cartoon and "starring deens"; p. 2 copyright page; pp. 3–22 the 20 story pages, in order and complete (the text runs from "Once upon a time…" to "…never strayed from the path again."); p. 23 The End; p. 24 About Me with the real photo, the cartoon and the name. The hero is the same child on every page she appears (pp. 3–9 and 14–22; pp. 10–13 are the wolf and Grandmother alone, as the story says), and she matches the cover and the About Me cartoon: same long dark wavy hair with a center part, green eyes, and small earrings. That was run 2's open problem (pages consistent with each other but not with the cartoon) and it is fixed. One cartoon style throughout; the same Mother (pp. 4, 22), Grandmother (pp. 12, 20, 22), wolf and woodcutter (pp. 19, 20, 22). The dress shows on all 16 hero pages. No extra or missing arms or hands on any page (checked every hero page at 110 dpi; p. 15, hand on chin, has two arms). Text never covers a face or anything the page needs: 16 panels on plain sky or wall at the top, 4 at the bottom on the ground or path below the characters (pp. 3, 10, 11, 21), checked on all 20 pages. The text is real type (Times-Bold and Times-Italic embedded, extractable), legible at 100%; p. 21 uses a dark panel over the sunset path.
+- Money (desk): the average API cost per book is tracked per call (images, redraws, checks, detail checks) and shown on the Wallet next to the $0.99 price (`ai.Meter`, `generator.cost_stats`, `wallet.html`); the print price ($34.99) is shown next to Lulu's average cost.
+- Engineering (desk): the character bible is in DynamoDB (`STORY#red` / `BIBLE#…`, now also `HEAD#…` for the stand-in head boxes). `to-do.md` is updated in this commit with the real open defects. `review-log.md` holds runs 1–3, oldest first, none edited. Repo: 18 commits; no API key in any file or anywhere in the history (only `.env.example`, with placeholders).
+
+Fix first:
+1. The name prints exactly as typed, so a lowercase "deens" went on the cover, copyright page, The End and About Me (PDF, 0 points but the first thing a parent sees). Fixed after this run: names typed all in lowercase are capitalized; names with a capital are left as typed.
+2. Run the browser half of the rubric before the instructor does: speed (59 s in run 2, no margin, and the stricter page check can add a redraw), fund/deduct/refund, phone width (UI 2, unmeasured since run 1) (up to 50 points unmeasured).
+3. Make one Jack and the Beanstalk book on the new code: the face blur and arm check were only seen on Red Riding Hood.
+4. Place one sandbox print order on the live site end to end and check the Orders page (the flow is tested locally with Lulu's real quote, not yet on the live site).

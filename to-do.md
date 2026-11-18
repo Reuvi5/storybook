@@ -1,23 +1,36 @@
 # To do
 
-Real defects, most important first. Found by using the live site and by review run 1 (see `review-log.md`).
+Real defects and risks, most important first. From review runs 1–3 (see `review-log.md`) and from using the live site.
 
 ## Speed
-1. **Upload to PDF is right at the 60-second limit.** Run 1: the Jack book took 64 s (character about 25 s, pages about 35 s, the PDF under 1 s). The pages now start while the character is still being checked, which should save about 5 s, but one redrawn page still adds about 20 s. Render's free server has a tenth of a CPU; a paid instance would give some margin.
-2. **The first Red Riding Hood book crashed the server while building the PDF** (the PDF library re-encoded every picture into raw pixels: about 470 MB on a 512 MB server). Fixed by embedding the JPEGs directly. Watch the Render logs for "Out of memory" anyway.
+1. **Upload to PDF has no margin under 60 seconds.** Run 2: 59 s. The page check is stricter since Nov 17 (it counts arms and compares the face with a close-up), so more pages get redrawn, and one redraw adds about 20 s. Render's free server has 0.1 CPU and sleeps when idle (UptimeRobot keeps it awake). Options: smaller reference pictures, a paid instance, or a slightly looser face score if redraws become common.
 
 ## The pictures
-3. **Text covered part of the story on 2 pages** (Jack p. 16: Jack's body and the harp; Red p. 15: Red's legs) while the top of both pages was empty. The layout now measures how plain each spot is and never puts text over a busy area. Check every page of the next two books.
-4. **The character isn't always the same person as the photo.** In run 1 the cartoon looked younger than the age entered (10). Faces stay consistent from page to page, but "looks like the photo" depends on the first drawing.
-5. **OpenAI's safety filter blocks some drawings:** Jack's mother's character sheet was blocked on every wording and had to be copied out of a finished scene, and single page drawings are sometimes blocked. A blocked drawing counts as one of the 3 tries.
+2. **Jack and the Beanstalk hasn't been checked on the new code.** The stand-in-face blur and the arm check were only seen on a Red Riding Hood book (run 3, all pages fine). Make one Jack book and check pages 1, 10 and 20 against the About Me cartoon.
+3. **The stand-in's head is found by a vision call, once per scene** (saved as `HEAD#nn`). If a box is wrong, that page falls back to the old way and can drift a little toward the stand-in. Look at the `hero_head_found` lines in the logs once, and redo any box that isn't on the head.
+4. **OpenAI's safety filter blocks some drawings.** Jack's mother's character sheet had to be copied out of a finished scene, and single page drawings are sometimes blocked. A blocked drawing counts as one of the 3 tries.
+5. **The story text says "someone" and "them".** It fits any child, but with a girl in a dress, "she" would read more naturally. Possible: pick the pronoun from the photo or ask in the form.
+
+## Printing
+6. **No sandbox order has been placed on the live site yet.** The flow was tested locally, and the real Lulu sandbox returned the cover size and a quote ($21.99 for printing, shipping, fulfillment and tax to North Carolina), but no print job has been created from the live site. Place one and check that the Orders page shows Lulu's status.
+7. **US addresses only, one shipping speed (MAIL).** Faster shipping or other countries would need a price per shipping level; the margin guard refuses any address whose quote leaves less than $5.
+8. **The approval preview uses the browser's PDF viewer.** Some phones show a blank frame; the "Open" link works everywhere. A page-by-page image preview would be clearer.
 
 ## Money
-6. **A book costs about $0.70 to make and sells for $0.99.** A book with several redraws can cost close to $0.99. Smaller reference pictures would cut the cost of every page.
-7. **The cost of the first Red Riding Hood book was lost** when the server crashed (costs were only saved at the end). Costs are now saved after each stage; the running average was reset at 18:49 UTC on Nov 10.
+9. **A digital book makes about $0.20** ($0.99 price, about $0.70 to make, about $0.09 of Stripe fees). A book with several redraws can cost close to $0.99. The printed book is where the margin is ($10.99 per copy, see `WRITEUP.md`).
+10. **Sales tax is Lulu's estimate for the address**; it varies by state and is inside the flat $34.99, so the margin varies by a dollar or two.
+
+## Keys and accounts
+11. **The OpenAI key expired on Nov 17** and every book failed with "we couldn't check the details" until it was replaced. Keys now need renewing; the error message should say the picture service is down, not point at the name field.
 
 ## Smaller things
-8. "Try again" after a crash only rebuilds the PDF; its message used to say "0 pictures didn't come out". Fixed, but not yet seen on the live site.
-9. Running out of OpenAI credits made the book say "we couldn't create a character from this photo". It now says the picture service is unavailable. Not yet seen live.
-10. My books showed "Drawing..." on a failed book's card. Fixed: it now says "Couldn't be made".
-11. The Wallet history table was 6 px wider than its card at 400 px.
-12. The hourly limit (3 books an hour) gets in the way of testing, and a user with no money used to see the limit message instead of "add funds". Fixed.
+12. The hourly limit (3 books an hour per account) gets in the way of testing.
+13. The About Me page prints only what was entered; with no details it is just the name and the two pictures.
+
+## Done since the last list
+- Names typed in lowercase are capitalized (run 3 found "deens" on the cover).
+- Pages no longer copy the stand-in's face, and the page check counts arms (the 3-armed Red Riding Hood page).
+- Red Riding Hood wears a dress (girls).
+- Clicking a page opens it large, as printed, instead of the bare picture.
+- `to-do.md` committed with the real list (run 2's first fix).
+- Phone layout: no sideways scrolling on any page at 400 px.

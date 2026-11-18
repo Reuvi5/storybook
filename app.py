@@ -268,12 +268,21 @@ def privacy():
     return render_template("privacy.html")
 
 
+def proper_name(raw: str) -> str:
+    """A name typed all in lowercase ("deens", "mary-kate") is printed capitalized ("Deens", "Mary-Kate").
+    Anything with a capital already is left exactly as typed (McKenzie, DeShawn, da Silva)."""
+    name = " ".join(raw.split())[:40]
+    if name and name == name.lower() and name != name.upper():
+        name = re.sub(r"(^|[\s\-'])(\w)", lambda m: m.group(1) + m.group(2).upper(), name)
+    return name
+
+
 @app.post("/make")
 @login_required
 def make():
     user = current_user()
 
-    values = {"name": request.form.get("name", "").strip()[:40]}
+    values = {"name": proper_name(request.form.get("name", ""))}
     for key, _label, max_len in DETAILS:
         values[key] = request.form.get(key, "").strip()[:max_len]
     story_id = request.form.get("story", "")
