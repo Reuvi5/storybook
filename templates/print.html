@@ -37,33 +37,33 @@
   <h1>Order a printed copy</h1>
   <p class="sub">{{ story.title }}, starring {{ book.details.name }}</p>
 
-  <div class="sandbox"><strong>Test mode.</strong> Orders go to Lulu's sandbox: no book is really printed or shipped, and payments are Stripe test money.</div>
+  <div class="sandbox"><strong>Test store.</strong> Nothing is actually printed or shipped, and no real money is charged.</div>
 
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
 
   {% if not ready %}
-    <div class="card"><p style="margin:0">Printing isn't set up on this server yet.</p></div>
+    <div class="card"><p style="margin:0">Printed copies aren't available right now.</p></div>
   {% elif info %}
     <section class="card step">
       <h2><span class="num">1</span> Review the book</h2>
-      <p class="spec">6 × 9 inch hardcover, full color, {{ info.page_count }} pages inside. These are the exact files the printer receives: check every page and the cover.</p>
+      <p class="spec">6 × 9 inch hardcover, full color, {{ info.page_count }} pages. This is exactly what will be printed, so please look through every page and the cover.</p>
       <div class="previews">
         <div class="pv cover">
-          <div class="cap"><span><strong>Cover</strong>, opened flat: back cover (About Me), spine, front cover</span><a href="{{ cover_url }}" target="_blank">Open</a></div>
+          <div class="cap"><span><strong>Cover</strong>, laid flat: back, spine and front</span><a href="{{ cover_url }}" target="_blank">Open</a></div>
           <iframe src="{{ cover_url }}#view=FitH&toolbar=0" title="Cover PDF"></iframe>
         </div>
         <div class="pv">
-          <div class="cap"><span><strong>Inside pages</strong>: copyright page, the story, The End, endpapers</span><a href="{{ interior_url }}" target="_blank">Open</a></div>
+          <div class="cap"><span><strong>Inside pages</strong></span><a href="{{ interior_url }}" target="_blank">Open</a></div>
           <iframe src="{{ interior_url }}#view=FitH" title="Interior PDF"></iframe>
         </div>
       </div>
       {% if approved %}
-        <p class="ok" style="margin:16px 0 0">✓ You approved this book for printing on {{ info.approved_at | datetime }}.</p>
+        <p class="ok" style="margin:16px 0 0">✓ Approved for printing on {{ info.approved_at | datetime }}.</p>
       {% else %}
         <form method="post" action="{{ url_for('orders.approve', book_id=book.book_id) }}">
           <input type="hidden" name="fingerprint" value="{{ info.interior_sha[:12] }}">
           <label class="approve"><input type="checkbox" name="approve" value="yes" required>
-            <span>I've looked at every page and the cover, and I approve this book for printing. Nothing is ordered until I enter an address and place the order.</span></label>
+            <span>I've checked every page and the cover, and they're ready to print. (Nothing is ordered yet.)</span></label>
           <button class="btn">Approve for printing</button>
         </form>
       {% endif %}
@@ -99,7 +99,7 @@
             {{ field('phone_number', 'Phone (for the delivery)', type='tel', auto='tel') }}
             {{ field('email', 'Email (for delivery updates)', type='email', full=True, auto='email') }}
           </div>
-          <p class="hint">United States addresses only for now. Standard mail, usually 5–10 business days.</p>
+          <p class="hint">US addresses only. It usually arrives in 5–10 business days.</p>
           <div class="pay">
             <div class="price"><b>{{ money(price) }}</b> &nbsp;including printing and shipping · from your balance of {{ money(balance) }}</div>
             {% if balance < price %}

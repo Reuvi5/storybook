@@ -14,7 +14,7 @@
 {% endblock %}
 {% block content %}
   <h1>{{ 'Order' if one else 'Orders' }}</h1>
-  <p class="sub">Printed copies of your books. Test mode: orders go to Lulu's sandbox, so nothing is really printed or shipped.</p>
+  <p class="sub">Printed copies of your books. This is a test store, so nothing is actually printed or shipped.</p>
   {% if not orders %}
     <div class="card"><p style="margin:0">No printed orders yet. Open a finished book in <a href="{{ url_for('books') }}">My books</a> and choose "Order a printed copy".</p></div>
   {% endif %}
@@ -27,14 +27,14 @@
           <div class="meta">Ordered {{ o.created_at | datetime }} · {{ money(o.price_cents) }}</div>
         </div>
         <span class="status {{ 'bad' if o.status == 'failed' or st in ('REJECTED', 'CANCELED', 'ERROR') else ('good' if st in ('SHIPPED', 'IN_PRODUCTION', 'PRODUCTION_READY') else '') }}">
-          {% if o.status == 'failed' %}Not accepted · refunded{% else %}{{ {'CREATED': 'Sent to printer', 'UNPAID': 'Waiting for printer payment (sandbox)', 'PAYMENT_IN_PROGRESS': 'Printer payment in progress', 'PRODUCTION_DELAYED': 'Queued at printer', 'PRODUCTION_READY': 'Ready to print', 'IN_PRODUCTION': 'Printing', 'SHIPPED': 'Shipped', 'REJECTED': 'Rejected by printer', 'CANCELED': 'Canceled', 'ERROR': 'Printer error'}.get(st, st) }}{% endif %}
+          {% if o.status == 'failed' %}Couldn't be printed · refunded{% else %}{{ {'CREATED': 'Sent to printer', 'UNPAID': 'Sent to printer (test)', 'PAYMENT_IN_PROGRESS': 'Sent to printer', 'PRODUCTION_DELAYED': 'Waiting to print', 'PRODUCTION_READY': 'Ready to print', 'IN_PRODUCTION': 'Printing', 'SHIPPED': 'Shipped', 'REJECTED': 'Rejected by printer', 'CANCELED': 'Canceled', 'ERROR': 'Problem at the printer'}.get(st, st) }}{% endif %}
         </span>
         <dl class="rows">
           <dt>Ship to</dt><dd>{{ o.ship_to.name }}, {{ o.ship_to.city }}, {{ o.ship_to.state }} {{ o.ship_to.postcode }}</dd>
-          <dt>Book</dt><dd><a href="{{ url_for('book', book_id=o.book_id) }}">6 × 9 hardcover, {{ o.page_count }} pages</a> · approved {{ o.approved_at | datetime }}</dd>
-          {% if o.lulu_job_id %}<dt>Printer order</dt><dd>Lulu sandbox job {{ o.lulu_job_id }}{% if o.lulu_message %} · {{ o.lulu_message }}{% endif %}</dd>{% endif %}
+          <dt>Book</dt><dd><a href="{{ url_for('book', book_id=o.book_id) }}">6 × 9 hardcover, {{ o.page_count }} pages</a></dd>
+          {% if o.lulu_job_id %}<dt>Order number</dt><dd>{{ o.lulu_job_id }}</dd>{% endif %}
           {% if o.tracking %}<dt>Tracking</dt><dd><a href="{{ o.tracking }}" target="_blank">Track the package</a></dd>{% endif %}
-          {% if o.error %}<dt>Why</dt><dd>{{ o.error }}</dd>{% endif %}
+          {% if o.error %}<dt>What happened</dt><dd>{{ o.error }}</dd>{% endif %}
         </dl>
       </div>
     {% endfor %}

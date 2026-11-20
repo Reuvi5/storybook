@@ -54,7 +54,7 @@
           <div class="thumb {{ 'plain' if not b.cover_url else '' }}">
             {% if b.status == 'done' %}<span class="flag done">Ready</span>
             {% elif b.status == 'generating' %}<span class="flag wait">Drawing</span>
-            {% elif b.status == 'needs_retry' %}<span class="flag bad">Needs retry</span>
+            {% elif b.status == 'needs_retry' %}<span class="flag bad">Needs another try</span>
             {% else %}<span class="flag bad">Failed</span>{% endif %}
             {% if b.cover_url %}<img src="{{ b.cover_url }}" alt="{{ b.details.name }}'s character" loading="lazy">
             {% elif b.status == 'failed' %}<span>Couldn't be made</span>

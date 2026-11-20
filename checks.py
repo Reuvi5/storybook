@@ -70,7 +70,7 @@ def rule_checks(values: dict) -> dict:
     elif re.search(r"(.)\1\1\1", name.lower()) or len(re.sub(r"[^\w]", "", name)) < 2:
         problems["name"] = "That doesn't look like a real name."
     elif _words(name) & BLOCKED:
-        problems["name"] = "Please use the child's real name. Nicknames that are insults or jokes can't be printed."
+        problems["name"] = "Please use the child's real name."
 
     age = values.get("age", "").strip()
     if age:
@@ -83,13 +83,13 @@ def rule_checks(values: dict) -> dict:
         if not text:
             continue
         if EMAIL.search(text) or LINK.search(text):
-            problems[key] = "Please don't include email addresses or links: this gets printed in a book."
+            problems[key] = "Please leave out emails and links."
         elif PHONE.search(text):
-            problems[key] = "Please don't include phone numbers or other long numbers: this gets printed in a book."
+            problems[key] = "Please leave out phone numbers."
         elif STREET.search(text):
-            problems[key] = "Please don't include a street address: this gets printed in a book."
+            problems[key] = "Please leave out street addresses."
         elif _words(text) & (BLOCKED - {"test", "admin", "null", "undefined", "nobody", "anonymous"}):
-            problems[key] = "Please keep this suitable for a children's book."
+            problems[key] = "Please keep this kid-friendly."
     return problems
 
 
@@ -104,7 +104,7 @@ def moderation_checks(values: dict, meter=None) -> dict:
             cats = [c for c, v in result.categories.model_dump().items() if v]
             log.info("moderation_flagged field=%s categories=%s", key, ",".join(cats))
             problems[key] = ("Please use the child's real name." if key == "name"
-                             else "Please keep this suitable for a children's book.")
+                             else "Please keep this kid-friendly.")
     return problems
 
 
@@ -147,10 +147,10 @@ def model_checks(values: dict, meter=None) -> dict:
     problems = {}
     if not r.get("name_ok", True):
         log.info("name_rejected reason=%s", r.get("name_reason", "")[:120])
-        problems["name"] = "Please enter the child's real name. Insults, jokes and nicknames that make fun of someone can't be printed."
+        problems["name"] = "Please use the child's real name."
     for key, verdict in (r.get("fields") or {}).items():
         if key in FIELDS and isinstance(verdict, dict) and verdict.get("ok") is False:
-            problems[key] = "Please keep this suitable for a children's book, and leave out contact details."
+            problems[key] = "Please keep this kid-friendly, and leave out contact details."
     return problems
 
 
@@ -165,5 +165,5 @@ def check_details(values: dict, meter=None) -> dict:
             problems.update(model_checks(values, meter))
     except Exception:  # noqa: BLE001 - if the checker is down, don't print unchecked text
         log.exception("details_check_failed")
-        return {"name": "We couldn't check the details right now. Please try again in a minute."}
+        return {"_service": "We can't make books right now. Please try again in a few minutes."}
     return problems

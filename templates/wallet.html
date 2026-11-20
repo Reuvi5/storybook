@@ -41,7 +41,7 @@
 {% endblock %}
 {% block content %}
   <h1>Wallet</h1>
-  <p class="sub">Each book costs {{ money(price) }}. Payments are in Stripe test mode, so no real money moves.</p>
+  <p class="sub">Each book costs {{ money(price) }}. This is a test store, so no real money is charged.</p>
 
   <div class="top">
     <div class="card balcard">
@@ -60,9 +60,9 @@
             </form>
           {% endfor %}
         </div>
-        <p class="hint">You'll pay on Stripe's secure page. In test mode, use card 4242 4242 4242 4242, any future date and any CVC.</p>
+        <p class="hint">You'll pay on Stripe's secure page. To test, use card 4242 4242 4242 4242 with any future date and any CVC.</p>
       {% else %}
-        <p class="hint">Payments aren't set up on this server yet.</p>
+        <p class="hint">Adding funds isn't available right now.</p>
       {% endif %}
     </div>
   </div>
@@ -72,13 +72,13 @@
     <div class="label">What a book costs to make</div>
     {% if a.avg_usd is not none %}
       <div class="costrow">
-        <div><div class="big">{{ '$%.3f' % a.avg_usd }}</div><div class="detail">average API cost per book, over {{ a.books }} book{{ '' if a.books == 1 else 's' }}</div></div>
-        <div><div class="big">{{ money(price) }}</div><div class="detail">what each book costs you</div></div>
+        <div><div class="big">{{ '$%.3f' % a.avg_usd }}</div><div class="detail">average cost to make a book, over {{ a.books }} book{{ '' if a.books == 1 else 's' }}</div></div>
+        <div><div class="big">{{ money(price) }}</div><div class="detail">what you pay per book</div></div>
         <div><div class="big">{{ '$%.3f' % (price / 100 - a.avg_usd) }}</div><div class="detail">left over per book</div></div>
       </div>
-      <p class="hint">Includes every OpenAI call: image drawing, redraws from the quality check, and the checks themselves ({{ a.image_calls }} image calls, {{ a.retries }} retr{{ 'y' if a.retries == 1 else 'ies' }}, {{ a.analysis_calls }} checks in total).</p>
+      <p class="hint">Counts every drawing, redraw and check ({{ a.image_calls }} drawings, {{ a.retries }} retr{{ 'y' if a.retries == 1 else 'ies' }}, {{ a.analysis_calls }} checks in total).</p>
     {% else %}
-      <p class="hint">No books made yet.</p>
+      <p class="hint">No books yet.</p>
     {% endif %}
   </div>
 
@@ -86,17 +86,17 @@
   <div class="card" style="margin-bottom:28px">
     <div class="label">A printed, shipped book</div>
     <div class="costrow">
-      <div><div class="big">{{ money(print_price) }}</div><div class="detail">what a printed copy costs you, shipping included</div></div>
+      <div><div class="big">{{ money(print_price) }}</div><div class="detail">for a printed copy, shipping included</div></div>
       {% if ps.avg_lulu is not none %}
-        <div><div class="big">${{ '%.2f' % ps.avg_lulu }}</div><div class="detail">average printing + shipping (Lulu), over {{ ps.orders }} order{{ '' if ps.orders == 1 else 's' }}</div></div>
+        <div><div class="big">${{ '%.2f' % ps.avg_lulu }}</div><div class="detail">average printing and shipping cost, over {{ ps.orders }} order{{ '' if ps.orders == 1 else 's' }}</div></div>
       {% endif %}
     </div>
-    <p class="hint">Printed by Lulu as a 6 × 9 inch full-color hardcover. Test mode: orders go to Lulu's sandbox.</p>
+    <p class="hint">A 6 × 9 inch full-color hardcover. Test store: orders aren't really printed or shipped.</p>
   </div>
 
   <h2 style="margin:0 0 12px">History</h2>
   {% if not txns %}
-    <div class="card"><p style="margin:0">No transactions yet. Add funds to make your first book.</p></div>
+    <div class="card"><p style="margin:0">Nothing here yet. Add funds to make your first book.</p></div>
   {% else %}
     <div class="card scroll">
       <table>
@@ -119,11 +119,11 @@
                 <div class="detail">
                   {% if t.kind == 'deposit' %}Stripe payment {{ t.stripe_payment_intent }}{% if t.refunded_cents %} · {{ money(t.refunded_cents) }} refunded{% endif %}
                   {% elif t.kind == 'book' %}Charged when the book was started
-                  {% elif t.kind == 'book_refund' %}The book failed, so it was free
+                  {% elif t.kind == 'book_refund' %}The book didn't work out, so you weren't charged
                   {% elif t.kind == 'refund' %}Requested {{ t.requested_at | datetime }}{% if t.processed_at %} · processed {{ t.processed_at | datetime }}{% endif %}{% if t.stripe_refund %} · Stripe refund {{ t.stripe_refund }}{% endif %}
-                  {% elif t.kind == 'refund_reversed' %}Stripe rejected the refund
-                  {% elif t.kind == 'print' %}<a href="{{ url_for('orders.order', order_id=t.order_id) }}">Printed and shipped by Lulu (sandbox)</a>
-                  {% elif t.kind == 'print_refund' %}The printer couldn't accept the order
+                  {% elif t.kind == 'refund_reversed' %}The refund didn't go through
+                  {% elif t.kind == 'print' %}<a href="{{ url_for('orders.order', order_id=t.order_id) }}">Printed copy (test order)</a>
+                  {% elif t.kind == 'print_refund' %}The printer couldn't take the order, so it was refunded
                   {% endif %}
                 </div>
                 {% if t.kind == 'deposit' and t.refundable %}

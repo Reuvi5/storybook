@@ -119,7 +119,7 @@ def approve(book_id):
     if not info:
         return redirect(url_for("orders.print_page", book_id=book_id))
     if request.form.get("approve") != "yes" or request.form.get("fingerprint") != info["interior_sha"][:12]:
-        flash("Please tick the box to confirm you've reviewed the book.")
+        flash("Please tick the box to approve the book first.")
         return redirect(url_for("orders.print_page", book_id=book_id))
     info.update(approved_at=int(time.time()), approved_for=info["interior_sha"] + info["cover_sha"])
     _storage().update_book(user["id"], book_id, print=info)
@@ -159,7 +159,7 @@ def place_order(book_id):
     storage = _storage()
     info = b.get("print")
     if not printing.configured() or not info or not _approved(info):
-        flash("Please review and approve the book before ordering.")
+        flash("Please look through the book and approve it first.")
         return redirect(url_for("orders.print_page", book_id=book_id))
     address, errors = check_address(request.form)
     s = stories.get_story(b["story_id"])
@@ -180,12 +180,12 @@ def place_order(book_id):
     try:
         cost = printing.quote(address, info["page_count"])
     except printing.LuluError as e:
-        return again(f"The printer couldn't price this address: {e}")
+        log.warning("print_quote_failed user=%s error=%s", user["id"], e)
+        return again("We couldn't get a shipping price for this address. Please check it and try again.")
     # Never sell at a loss: the fixed price has to cover Lulu's quote plus card fees and the book's AI cost.
     if cost["total"] > price / 100 - MIN_MARGIN_USD:
         log.warning("print_quote_too_high user=%s quote=%.2f price=%.2f", user["id"], cost["total"], price / 100)
-        return again("Printing and shipping to this address costs more than our flat price covers, so we can't "
-                     "ship there yet. Nothing was charged.")
+        return again("Sorry, we can't ship to this address yet. You haven't been charged.")
 
     order_id = printing.new_order_id()
     title = f"{s['title']}, starring {b['details']['name']}"
@@ -208,11 +208,12 @@ def place_order(book_id):
             cover_url=_url(book_key(user["id"], book_id, "print-cover.pdf"), 7 * 24 * 3600),
             page_count=info["page_count"], address=address, email=address["email"], external_id=order_id)
     except printing.LuluError as e:
-        ledger.refund_print(storage, user["id"], order_id, price, "the printer couldn't accept the order")
+        ledger.refund_print(storage, user["id"], order_id, price, "the printer couldn't take the order")
         record.update(status="failed", error=str(e)[:300])
         storage.put_record(user["id"], f"ORDER#{order_id}", record)
         log.error("print_order_failed user=%s order=%s error=%s", user["id"], order_id, e)
-        return again(f"The printer couldn't accept the order, so your {ledger.money(price)} was returned: {e}")
+        return again(f"The printer couldn't take this order, so your {ledger.money(price)} is back in your balance. "
+                     "Please try again later.")
     record.update(status="placed", lulu_job_id=job["id"], lulu_status=job["status"], lulu_message=job["message"],
                   checked_at=int(time.time()))
     storage.put_record(user["id"], f"ORDER#{order_id}", record)

@@ -73,8 +73,13 @@
   .frame > img.full { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
   .frame > img.band { position: absolute; }
   .txt { position: absolute; display: flex; flex-direction: column; justify-content: center; text-align: center; font-family: "Times New Roman", Times, serif; font-weight: bold; line-height: 1.28; border-radius: 2.8cqw; }
-  .txt.light { background: rgba(255,250,240,.88); color: #3b2614; }
-  .txt.dark { background: rgba(15,13,23,.62); color: #fff5dc; }
+  /* like the PDF: words on the picture, on a soft patch of light (or shade) that fades into the art */
+  .txt.light, .txt.dark { isolation: isolate; }
+  .txt.light::before, .txt.dark::before { content: ""; position: absolute; inset: -12% 6%; z-index: -1; border-radius: 40%; filter: blur(2.6cqw); }
+  .txt.light { color: #3b2614; text-shadow: 0 0 .5cqw rgba(255,250,240,.9), 0 0 1.2cqw rgba(255,250,240,.6); }
+  .txt.light::before { background: rgba(255,250,240,.5); }
+  .txt.dark { color: #fff5dc; text-shadow: 0 0 .5cqw rgba(14,12,22,.85), 0 0 1.2cqw rgba(14,12,22,.55); }
+  .txt.dark::before { background: rgba(14,12,22,.42); }
   .txt.paper { color: #3b2614; }
   .cover { background: var(--cover); color: #fff5dc; }
   .cover .tl { position: absolute; left: 0; right: 0; text-align: center; font-family: "Times New Roman", Times, serif; font-weight: bold; font-size: 7.87cqw; line-height: 1; }
@@ -126,18 +131,16 @@
   {% if book.cost and book.status != 'generating' %}
     {% set c = book.cost %}
     {% set a = avg_cost() %}
-    <p class="costline">Cost to make this book: <b>{{ '$%.3f' % c.usd }}</b>{{ ' (estimated, test mode)' if c.estimated }}
-      · {{ c.image_calls }} image calls ({{ c.retries }} retr{{ 'y' if c.retries == 1 else 'ies' }}) · {{ c.analysis_calls }} quality checks
-      · price {{ money(price) }}{% if a.avg_usd is not none %} · average over {{ a.books }} book{{ '' if a.books == 1 else 's' }} {{ '$%.3f' % a.avg_usd }}{% endif %}</p>
+    <p class="costline">This book cost <b>{{ '$%.2f' % c.usd }}</b> to make{{ ' (estimate)' if c.estimated }} and sells for {{ money(price) }}{% if a.avg_usd is not none %} · average {{ '$%.2f' % a.avg_usd }} over {{ a.books }} book{{ '' if a.books == 1 else 's' }}{% endif %}</p>
   {% endif %}
 
   {% if book.status == 'failed' %}
     {% if book.failure == 'service' %}
-      <div class="warn"><strong>Our picture service isn't available right now, so this book couldn't be made.</strong> It wasn't your photo. Your {{ money(price) }} has been returned to your balance. Please try again in a little while.</div>
+      <div class="warn"><strong>We can't make books right now.</strong> It wasn't your photo. Your {{ money(price) }} is back in your balance. Please try again a little later.</div>
     {% elif book.failure == 'blocked' %}
-      <div class="warn"><strong>The image service's safety filter turned this photo down.</strong> Your {{ money(price) }} has been returned to your balance. Try a different photo: one clear face, front-facing, ordinary clothes.</div>
+      <div class="warn"><strong>We couldn't use this photo.</strong> Your {{ money(price) }} is back in your balance. Please try a different photo of just your child, facing the camera.</div>
     {% else %}
-      <div class="warn"><strong>Sorry, we couldn't create a character from this photo.</strong> Your {{ money(price) }} has been returned to your balance. A clear, front-facing photo works best.</div>
+      <div class="warn"><strong>Sorry, we couldn't make a character from this photo.</strong> Your {{ money(price) }} is back in your balance. A clear photo of their face works best.</div>
     {% endif %}
     <div class="actions" style="margin-bottom:24px">
       <a class="btn" href="{{ url_for('index') }}">Try another photo</a>
@@ -150,7 +153,7 @@
     {% set cur = book.stage if book.stage in order else 'pages' %}
     <section class="card progress" id="progress">
       <div class="stages" id="stages">
-        {% for st, label in [('character', 'Your character'), ('pages', '20 pages'), ('pdf', 'PDF')] %}
+        {% for st, label in [('character', 'Your character'), ('pages', '20 pages'), ('pdf', 'Finishing up')] %}
           <div class="stage {{ 'on' if st == cur and book.status == 'generating' else ('done' if order.index(st) < order.index(cur) else '') }}" data-stage="{{ st }}"><span class="dot">{{ loop.index }}</span>{{ label }}</div>
         {% endfor %}
       </div>
@@ -159,8 +162,8 @@
       <div class="count"><span id="count">{{ images|selectattr('status', 'equalto', 'done')|list|length }} of {{ images|length }} pictures</span><span id="elapsed"></span></div>
       {% if book.status == 'needs_retry' %}
         <div class="warn" style="margin:18px 0 0">
-          {% if failed %}<strong>{{ failed|length }} picture{{ '' if failed|length == 1 else 's' }} didn't come out.</strong> Try again redraws only those, with the same character, at no extra cost.
-          {% else %}<strong>All the pictures are done, but the PDF didn't finish</strong> (the server restarted). Try again builds it, at no extra cost.{% endif %}
+          {% if failed %}<strong>{{ failed|length }} picture{{ '' if failed|length == 1 else 's' }} didn't turn out.</strong> Try again to redraw just those, for free.
+          {% else %}<strong>All the pictures are done, but the book didn't finish.</strong> Try again to finish it, for free.{% endif %}
           <form action="{{ url_for('retry', book_id=book_id) }}" method="post" id="retry" style="margin-top:10px"><button class="btn" id="retrybtn">Try again</button></form>
         </div>
       {% endif %}

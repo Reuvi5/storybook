@@ -314,6 +314,62 @@ def hero_prompt(s: dict) -> str:
     )
 
 
+# The hero's expression on each page (page 1 first). The face itself never changes, only the expression,
+# the way an animator would draw the same character happy, worried or surprised.
+EXPRESSIONS = {
+    "jack": [
+        "a soft, slightly wistful smile",
+        "worried: eyebrows raised in the middle, a small frown",
+        "hopeful and determined, with a small smile",
+        "curious: eyebrows raised, mouth slightly open",
+        "amazed: eyes wide, mouth open in wonder",
+        "thrilled: a big open-mouthed grin",
+        "sad and embarrassed: eyebrows tilted up, a small frown",
+        "thoughtful and a little sad: eyes looking up, a small frown",
+        "astonished: eyes wide, mouth open",
+        "determined, with a confident small smile",
+        "awed: eyes wide, mouth slightly open in wonder",
+        "startled and nervous: eyebrows up, mouth slightly open",
+        "frightened: eyes wide, lips pressed together, holding their breath",
+        "excited and a little nervous: a tense grin",
+        "sneaky and focused: a sly little smile",
+        "surprised and alarmed: eyes wide, mouth open",
+        "scared but determined: eyes wide, mouth open, running",
+        "urgent: shouting, mouth wide open, eyebrows up",
+        "determined: eyebrows lowered, jaw set",
+        "joyful: a big happy smile",
+    ],
+    "red": [
+        "a warm, friendly smile",
+        "attentive, listening carefully, a small soft smile",
+        "cheerful: a happy smile",
+        "surprised: eyebrows up, mouth in a small round 'oh'",
+        "polite and trusting: a friendly smile",
+        "delighted: a happy smile, eyes bright",
+        "happy and carefree: a gentle smile",
+        "calm, a small smile",
+        "calm, a small smile",
+        "calm, a small smile",
+        "calm, a small smile",
+        "curious and a little unsure: eyebrows slightly raised, no smile",
+        "puzzled: one eyebrow raised, mouth slightly open",
+        "uneasy: eyes wide, a small worried frown",
+        "frightened: eyes wide, mouth open in a gasp",
+        "scared: eyes wide, eyebrows up, mouth open, shouting",
+        "relieved: a small shaky smile",
+        "relieved: eyes closed, a gentle smile",
+        "calm and content: a soft smile",
+        "joyful: laughing, eyes crinkled",
+    ],
+}
+
+
+def expression(s: dict, page: dict) -> str:
+    faces = EXPRESSIONS.get(s["id"], [])
+    n = page.get("number", 0)
+    return faces[n - 1] if 0 < n <= len(faces) else "a natural expression that fits this moment in the story"
+
+
 def swap_prompt(s: dict, page: dict, head_hidden: bool = False) -> str:
     """Per book: put the user's hero into a pre-drawn scene. Image 1 = scene, image 2 = hero, image 3 = face."""
     hidden = (
@@ -326,16 +382,20 @@ def swap_prompt(s: dict, page: dict, head_hidden: bool = False) -> str:
         "Image 3 is a close-up of the hero's face from that design.\n\n"
         + hidden +
         "Replace the hero in image 1 with the character from image 2: same hair, skin tone, any head covering, "
-        "body proportions and outfit as image 2, in exactly the same position, pose, size, expression and lighting as "
+        "body proportions and outfit as image 2, in exactly the same position, pose, size and lighting as "
         "the hero in image 1. The clothes must be image 2's clothes: if the hero in image 1 is dressed differently "
         "(for example trousers instead of a dress), redraw their clothes to match image 2.\n\n"
         "ARMS AND HANDS: keep the hero's body pose from image 1 exactly, including where each arm and hand is. The "
         "hero has exactly TWO arms and TWO hands. Never add an arm or a hand, and do not copy the arm pose of image 2 "
         "(image 2 only shows what the hero looks like, not how they stand).\n\n"
-        "THE FACE MUST MATCH IMAGE 3 EXACTLY, as if it were the same 3D character model: same face shape, eye shape "
-        "and color, eyebrows, nose, mouth, ears, cheeks, freckles, hairline, hair color and curls, and the same apparent "
-        "age. Do not redesign, simplify, age up or age down the face. It must stay clearly visible, front-lit and "
-        "recognizable. Copy the face's SHAPES and FEATURES, drawn in the same cartoon style as image 2.\n\n"
+        "THE FACE MUST BE IMAGE 3'S FACE, as if it were the same 3D character model: same face shape, eye shape "
+        "and color, eyebrow shape, nose, mouth shape, ears, cheeks, freckles, hairline, hair color and curls, and the "
+        "same apparent age. Do not redesign, simplify, age up or age down the face. It must stay clearly visible, "
+        "front-lit and recognizable. Copy the face's SHAPES and FEATURES, drawn in the same cartoon style as image 2.\n\n"
+        f"EXPRESSION ON THIS PAGE: {expression(s, page)}, to fit this moment in the story. Image 3 shows what the face "
+        "looks like, not which expression to use. Show the expression only with the mouth, eyebrows, eyelids and "
+        "cheeks, the way an animator draws the same character happy, worried or surprised: the character must still "
+        "be instantly recognizable as image 3. Keep it natural and gentle, never exaggerated or distorted.\n\n"
         f"{CARTOON_ONLY}\n\n"
         "Change NOTHING else: keep every other character, the background, the colors, the composition and any empty areas "
         f"exactly as they are in image 1. {NO_TEXT}"

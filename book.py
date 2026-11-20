@@ -243,20 +243,69 @@ PUBLISHER = os.environ.get("PUBLISHER", "Kupchik Games")
 PUBLISHER_URL = os.environ.get("PUBLISHER_URL", "storybook.kupchikgames.shop")
 
 
+# The words sit on the picture itself, like a printed picture book: no box. Behind them is a soft, feathered
+# patch of light (or shade, on dark art) that fades into the picture, and a faint glow around the letters.
+# The layout already puts the words on the plainest part of the page, so this is enough to read them easily.
+GLOW = {
+    "light": ((255, 250, 240), 0.62, Color(1, 0.98, 0.94)),   # wash color, wash strength, halo color
+    "dark": ((14, 12, 22), 0.50, Color(0.06, 0.05, 0.09)),
+}
+_wash_cache = {}
+
+
+def _wash(theme, w, h):
+    """A soft-edged patch (RGBA PNG) for behind the words: full strength in the middle, fading to nothing."""
+    key = (theme, round(w / h, 1))
+    if key not in _wash_cache:
+        from PIL import Image, ImageDraw, ImageFilter
+        rgb, strength, _ = GLOW[theme]
+        px_w = 320
+        px_h = max(40, int(px_w * h / w))
+        feather = int(min(px_w, px_h) * 0.22)
+        alpha = Image.new("L", (px_w, px_h), 0)
+        ImageDraw.Draw(alpha).rounded_rectangle([feather, feather, px_w - feather, px_h - feather],
+                                                radius=feather, fill=int(255 * strength))
+        alpha = alpha.filter(ImageFilter.GaussianBlur(feather * 0.55))
+        img = Image.new("RGBA", (px_w, px_h), rgb + (0,))
+        img.putalpha(alpha)
+        _wash_cache[key] = ImageReader(img)
+    return _wash_cache[key]
+
+
 def _draw_text(c, layout):
-    panel, ink = PANEL[layout["theme"]]
+    _, ink = PANEL[layout["theme"]]
     x, y, w, h = layout["rect"]
-    if layout["mode"] == "overlay":
-        c.setFillColor(panel)
-        c.roundRect(x, y, w, h, 12, stroke=0, fill=1)
-    c.setFillColor(ink)
     size = layout["size"]
     leading = size * T.LEADING
-    c.setFont(T.STORY_FONT, size)
+    lines = []
     ty = y + h - T.PAD
     for line in layout["lines"]:
         ty -= leading
-        c.drawCentredString(x + w / 2, ty + (leading - size) * 0.62, line)
+        lines.append((line, ty + (leading - size) * 0.62))
+    glow = GLOW.get(layout["theme"]) if layout["mode"] == "overlay" else None
+    if glow:
+        # the soft patch runs a little past the text block, so its fading edge is outside the words
+        grow_x, grow_y = w * 0.10, h * 0.35
+        c.drawImage(_wash(layout["theme"], w + 2 * grow_x, h + 2 * grow_y), x - grow_x, y - grow_y,
+                    w + 2 * grow_x, h + 2 * grow_y, mask="auto")
+        halo = glow[2]
+        c.saveState()
+        c.setLineJoin(1)
+        for width, alpha in ((size * 0.42, 0.18), (size * 0.24, 0.35)):
+            c.setStrokeColor(Color(halo.red, halo.green, halo.blue, alpha=alpha))
+            c.setLineWidth(width)
+            for line, ly in lines:
+                t = c.beginText()
+                t.setTextRenderMode(1)
+                t.setFont(T.STORY_FONT, size)
+                t.setTextOrigin(x + w / 2 - c.stringWidth(line, T.STORY_FONT, size) / 2, ly)
+                t.textLine(line)
+                c.drawText(t)
+        c.restoreState()
+    c.setFillColor(ink)
+    c.setFont(T.STORY_FONT, size)
+    for line, ly in lines:
+        c.drawCentredString(x + w / 2, ly, line)
 
 
 def _fill(c, color, bleed=0):
@@ -302,8 +351,7 @@ def copyright_lines(title, name, book_id, made_at):
         ("body", PUBLISHER_URL),
         ("gap", ""),
         ("body", "Adapted from the traditional folk tale."),
-        ("body", f"Illustrated with AI from a photo of {name};"),
-        ("body", "every page was checked before printing."),
+        ("body", f"Illustrated with AI from a photo of {name}."),
         ("gap", ""),
         ("body", f"First edition, {month}"),
         ("small", f"Book {book_id[:8]}"),

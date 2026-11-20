@@ -274,7 +274,9 @@ Inspect image 1 carefully and reply with JSON only:
   "hero_face_clear": true/false (face visible, lit, large enough to recognize; true if no hero is needed),
   "hero_face_same": 0-10 (compare the hero's face in image 1 with the design's face{' in image 3' if face_png else ''}: same face shape,
                     eye shape and color, eyebrows, nose, mouth, hairline, hair color and style, apparent age. 10 = the same
-                    character model, 5 = a sibling or look-alike, 0 = someone else. Be strict. 10 if no hero is needed),
+                    character model, 5 = a sibling or look-alike, 0 = someone else. Be strict. IGNORE the expression:
+                    a smile, a frown, wide eyes or an open mouth is fine and must not lower this score; judge only
+                    whether it is the same character. 10 if no hero is needed),
   "hero_arms": number (count the hero's arms you can actually see, one by one, following each from the shoulder
                to the hand; 0 if no hero is needed),
   "extra_limbs": true/false (does ANY character have more than two arms, more than two legs, more than two hands,

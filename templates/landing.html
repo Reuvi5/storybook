@@ -105,17 +105,17 @@
   {% set red = stories|selectattr('id', 'equalto', 'red')|first if stories else none %}
   <div class="hero">
     <div>
-      <span class="eyebrow"><b>New</b> Printed hardcovers, shipped to your door</span>
+      <span class="eyebrow"><b>New</b> Order it as a printed hardcover</span>
       <h1>Your child is the <span class="hl">hero<svg viewBox="0 0 200 16" preserveAspectRatio="none" aria-hidden="true"><path d="M3 11c40-7 120-9 194-4" fill="none" stroke="#ffc845" stroke-width="7" stroke-linecap="round"/></svg></span> of the story</h1>
-      <p class="lead">Upload one photo. In about a minute we illustrate a 20-page picture book starring them: <b>Jack and the Beanstalk</b> or <b>Little Red Riding Hood</b>. Read it, download it, or order a printed copy.</p>
+      <p class="lead">Upload a photo of your child and get a 20-page picture book where they're the hero of <b>Jack and the Beanstalk</b> or <b>Little Red Riding Hood</b>. Read it, download it, or order a printed copy.</p>
       <div class="cta">
         {{ google_button() }}
         <span class="note">Books from <b>{{ money(price) }}</b></span>
       </div>
       <ul class="ticks">
-        <li>Every picture is checked, and redrawn if it isn't right</li>
-        <li>Words never cover a face</li>
-        <li>An "About Me" back cover with their real photo</li>
+        <li>Looks like your child on every page</li>
+        <li>Ready in about a minute</li>
+        <li>An "About Me" page with their real photo</li>
       </ul>
     </div>
     <div class="stage" aria-hidden="true">
@@ -131,19 +131,19 @@
         <div class="art" {% if red and red.cover %}style="background-image:url('{{ red.cover }}')"{% endif %}></div>
         <div class="s">starring You</div>
       </div>
-      <span class="sticker a"><span class="dot"></span>Ready in about a minute</span>
+      <span class="sticker a"><span class="dot"></span>Made just for them</span>
       <span class="sticker b">20 illustrated pages</span>
     </div>
   </div>
 
   <section class="block">
     <p class="kicker">How it works</p>
-    <h2>Three steps to their own book</h2>
-    <p class="sub">No drawing skills required. Just one good photo.</p>
+    <h2>Three easy steps</h2>
+    <p class="sub">All you need is one good photo.</p>
     <div class="steps">
-      <div class="card stepc"><div class="n">1</div><h3>Pick a story</h3><p>A classic fairy tale, retold with your child as the main character on every page.</p></div>
-      <div class="card stepc"><div class="n">2</div><h3>Add a photo</h3><p>A clear, smiling, front-facing photo. We turn it into a storybook character who looks like them.</p></div>
-      <div class="card stepc"><div class="n">3</div><h3>Read, download, print</h3><p>Watch the pages appear one by one, then download the PDF or order a printed hardcover.</p></div>
+      <div class="card stepc"><div class="n">1</div><h3>Pick a story</h3><p>A classic fairy tale, with your child in the main role.</p></div>
+      <div class="card stepc"><div class="n">2</div><h3>Add a photo</h3><p>A clear photo of their face. We turn it into a storybook character who looks just like them.</p></div>
+      <div class="card stepc"><div class="n">3</div><h3>Read, download, print</h3><p>Watch the pages appear, then download the book or order a hardcover.</p></div>
     </div>
   </section>
 
@@ -151,7 +151,7 @@
   <section class="block">
     <p class="kicker">The stories</p>
     <h2>Choose their adventure</h2>
-    <p class="sub">Each book has 20 pages, a cover, a copyright page, and an About Me back cover.</p>
+    <p class="sub">Every book has 20 illustrated pages and an About Me page with your child's photo.</p>
     <div class="stories">
       {% for s in stories %}
         <div class="card storyc">
@@ -171,25 +171,25 @@
 
   <section class="block">
     <p class="kicker">Pricing</p>
-    <h2>Simple prices, no subscription</h2>
-    <p class="sub">Add funds to your wallet once, then make books whenever you like.</p>
+    <h2>Simple pricing</h2>
+    <p class="sub">Add money to your wallet, then make books whenever you like. No subscription.</p>
     <div class="prices">
       <div class="card price">
         <h3>Digital book</h3>
         <div class="amt">{{ money(price) }} <small>per book</small></div>
-        <ul><li>20 illustrated pages, cover and back cover</li><li>Download as a PDF, saved in your account</li><li>Free redo if a picture doesn't come out</li></ul>
+        <ul><li>20 illustrated pages</li><li>Download it any time from your account</li><li>Free redo if a page doesn't turn out</li></ul>
       </div>
       <div class="card price feature">
         <span class="tag">Keepsake</span>
         <h3>Printed hardcover</h3>
         <div class="amt">{{ money(print_price) }} <small>shipping included</small></div>
-        <ul><li>6 × 9 inch full-color hardcover</li><li>You approve every page before it prints</li><li>Shipped anywhere in the US</li></ul>
+        <ul><li>6 × 9 inch full-color hardcover</li><li>See every page before you order</li><li>Shipped anywhere in the US</li></ul>
       </div>
     </div>
   </section>
 
   <div class="final">
-    <div><h2>Ready to make their book?</h2><p>It takes about a minute, and you'll see every page before you pay for print.</p></div>
+    <div><h2>Ready to make their book?</h2><p>It only takes a minute, and you can read the whole book before ordering a printed copy.</p></div>
     {{ google_button('Start with Google') }}
   </div>
 {% endblock %}

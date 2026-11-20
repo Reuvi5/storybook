@@ -128,16 +128,16 @@ def attempt_text(info: dict) -> str:
     if status == "waiting":
         return "Waiting"
     if status in ("drawing", "retrying"):
-        return f"{'Redrawing' if n > 1 else 'Drawing'} · try {max(n, 1)} of {MAX_TRIES}"
+        return f"{'Redrawing' if n > 1 else 'Drawing'} (try {max(n, 1)} of {MAX_TRIES})"
     if status == "checking":
-        return f"Checking · try {max(n, 1)} of {MAX_TRIES}"
+        return f"Checking (try {max(n, 1)} of {MAX_TRIES})"
     if status == "failed":
         return "Failed"
     if n == 0:
-        return "Pre-drawn scene · checked"
+        return "Done"
     if info.get("passed"):
-        return f"Passed on try {n} of {MAX_TRIES}"
-    return f"None passed · best of {n}"
+        return f"Done (try {n} of {MAX_TRIES})"
+    return f"Done (best of {n} tries)"
 
 
 @app.template_filter("datetime")
@@ -303,16 +303,18 @@ def make():
     try:
         photo = prepare_photo(upload.read())
     except (UnidentifiedImageError, ValueError):
-        return form_error("That file isn't an image I can read. Try a JPG or PNG.")
+        return form_error("We couldn't open that file. Please use a JPG or PNG photo.")
     if not generator.FAKE_IMAGES and not os.environ.get("OPENAI_API_KEY"):
-        return form_error("The server is missing its OpenAI API key.")
+        return form_error("We can't make books right now. Please try again later.")
 
     # Nothing inappropriate gets drawn or printed: check the name and About Me before charging.
     check_meter = ai.Meter()
     problems = checks.check_details(values, check_meter)
+    if problems.get("_service"):
+        return form_error(problems["_service"])
     if problems:
         log.info("details_rejected user=%s fields=%s", user["id"], ",".join(problems))
-        return form_error("Please fix the highlighted details. This book gets printed, so it has to be right.", problems)
+        return form_error("Please fix the highlighted details below.", problems)
 
     if storage.get_balance(user["id"]) < ledger.BOOK_PRICE_CENTS:  # say this before the hourly limit
         return form_error(f"Each book costs {ledger.money(ledger.BOOK_PRICE_CENTS)}, and your balance is "
@@ -418,7 +420,7 @@ def relayout(book_id):
         abort(404)
     changes = generator.relayout(storage, user["id"], b)
     moved = sum(1 for old, new in changes.values() if old != new)
-    flash(f"Text placed again with the current rules: {moved} of {len(changes)} pages moved. The PDF was rebuilt.")
+    flash(f"Done: the words were rearranged on {moved} of {len(changes)} pages, and the book was updated.")
     return redirect(url_for("book", book_id=book_id))
 
 

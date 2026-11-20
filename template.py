@@ -41,10 +41,24 @@ ORDER = {  # full-width spots first (the scene was drawn to leave the preferred 
 
 
 def _wrap(text, size, width):
-    lines = []
-    for para in text.split("\n"):
-        lines += simpleSplit(para, STORY_FONT, size, width)
-    return lines
+    """Wrap to the width, then even the lines out: the narrowest width that still needs the same number of
+    lines, so the last line isn't a single word ("Hood.") under three long ones."""
+    def split(wd):
+        out = []
+        for para in text.split("\n"):
+            out += simpleSplit(para, STORY_FONT, size, wd)
+        return out
+    lines = split(width)
+    if len(lines) < 2:
+        return lines
+    lo, hi = width * 0.55, width
+    for _ in range(14):
+        mid = (lo + hi) / 2
+        if len(split(mid)) == len(lines):
+            hi = mid
+        else:
+            lo = mid
+    return split(hi)
 
 
 def _zone_page_rect(zone):

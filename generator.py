@@ -38,12 +38,12 @@ CONCURRENCY = int(os.environ.get("IMAGE_CONCURRENCY", 20))
 STALLED_AFTER_SECONDS = 4 * 60       # a book stuck this long (server restarted) is marked for retry
 
 STAGES = {
-    "character": "Creating your character",
+    "character": "Drawing your character",
     "pages": "Drawing your 20 pages",
     "pdf": "Putting your book together",
     "done": "Ready",
     "needs_retry": "Some pages need another try",
-    "failed": "Couldn't create the character",
+    "failed": "Couldn't draw the character",
 }
 
 V1_NAMES = ["character", "page1", "page2", "page3"]   # books made before the 20-page template
