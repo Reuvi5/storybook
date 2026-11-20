@@ -107,17 +107,28 @@ def story_ready(storage, story_id) -> bool:
     return bool(meta and meta.get("ready"))
 
 
+PLATE_RECHECK_SECONDS = 300  # a scene redrawn with prepare_story.py is picked up within 5 minutes, no restart
+
+
 def plate(storage, story_id, number) -> dict:
-    """The plate record plus its JPEG bytes (cached in memory: every book uses the same 20)."""
+    """The plate record plus its JPEG bytes (cached in memory: every book uses the same 20). Every few
+    minutes the record is read again, and the picture reloaded only if the scene was redrawn."""
     cache_key = (story_id, number)
     with _cache_lock:
-        if cache_key in _cache:
-            return _cache[cache_key]
+        cached = _cache.get(cache_key)
+    if cached and time.time() - cached["_checked_at"] < PLATE_RECHECK_SECONDS:
+        return cached
     rec = storage.get_record(pk(story_id), f"PLATE#{number:02d}")
     if not rec:
+        if cached:
+            return cached
         raise RuntimeError(f"story {story_id} page {number} has not been prepared")
+    if cached and cached.get("made_at") == rec.get("made_at") and cached.get("jpeg") == rec.get("jpeg"):
+        cached["_checked_at"] = time.time()
+        return cached
     rec = dict(rec)
     rec["jpeg_bytes"] = storage.get_blob(rec["jpeg"])
+    rec["_checked_at"] = time.time()
     with _cache_lock:
         _cache[cache_key] = rec
     return rec
@@ -157,11 +168,11 @@ def scene_without_face(storage, story_id, number, meter=None):
     """The pre-drawn scene with the stand-in's head blurred out (cached), and whether it was hidden.
     Every page used to copy a little of the stand-in's face, so all of a book's pages looked like the
     same slightly-wrong child. With her face gone, the only face to copy is the child's."""
-    cache_key = ("noface", story_id, number)
+    rec = plate(storage, story_id, number)
+    cache_key = ("noface", story_id, number, rec.get("made_at"))  # a redrawn scene gets its own entry
     with _cache_lock:
         if cache_key in _cache:
             return _cache[cache_key]
-    rec = plate(storage, story_id, number)
     box = hero_head(storage, story_id, number, meter)
     result = (rec["jpeg_bytes"], False)
     if box:
