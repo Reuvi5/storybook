@@ -211,9 +211,16 @@ def story_cards() -> list:
     cards = []
     for s in stories.STORIES.values():
         ready = assets.story_ready(storage, s["id"])
-        cover = file_url(story_key(s["id"], f"plates/thumb-{stories.SHOWCASE.get(s['id'], 1):02d}.jpg")) if ready else None
-        samples = [file_url(story_key(s["id"], f"plates/thumb-{n:02d}.jpg")) for n in stories.SAMPLES.get(s["id"], (4, 11, 17))] if ready else []
-        cards.append({"id": s["id"], "title": s["title"], "hero": s["hero_name"], "ready": ready, "cover": cover,
+        def pic(n):
+            # Every scene leaves an empty band for the words (top or bottom). Thumbnails zoom in a little,
+            # anchored on the other side, so the scene itself fills the picture and looks centered.
+            zone = s["pages"][n - 1].get("zone", "")
+            focus = "top" if zone.startswith("bottom") else "bottom" if zone.startswith("top") else "center"
+            return {"url": file_url(story_key(s["id"], f"plates/thumb-{n:02d}.jpg")), "focus": focus}
+        showcase = pic(stories.SHOWCASE.get(s["id"], 1)) if ready else None
+        cover = showcase["url"] if showcase else None
+        samples = [pic(n) for n in stories.SAMPLES.get(s["id"], (4, 11, 17))] if ready else []
+        cards.append({"id": s["id"], "title": s["title"], "hero": s["hero_name"], "ready": ready, "cover": cover, "cover_focus": showcase["focus"] if showcase else "center",
                       "samples": samples, "blurb": s["pages"][0]["text"]})
     return cards
 

@@ -25,7 +25,7 @@
   .story .tick svg { width: 16px; height: 16px; }
   .story:has(input:checked) .tick { display: flex; }
   .story .cov { width: 78px; aspect-ratio: 2/3; border-radius: 4px 10px 10px 4px; background: #efe6d4; overflow: hidden; flex: none; box-shadow: inset 4px 0 0 rgba(0,0,0,.15), 0 6px 14px rgba(31,32,65,.18); }
-  .story .cov img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .story .cov img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.3); }
   .story strong { display: block; font-family: var(--serif); font-weight: 600; font-size: 18px; line-height: 1.2; margin-bottom: 4px; }
   .story span { font-size: 13.5px; color: var(--muted); }
   label.f { display: block; font-weight: 800; font-size: 14.5px; margin: 16px 0 6px; }
@@ -71,7 +71,7 @@
             <input type="radio" name="story" value="{{ s.id }}" {% if not s.ready %}disabled{% endif %}
                    {% if (chosen or '') == s.id or (not chosen and s.ready and loop.first) %}checked{% endif %} required>
             <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-            <div class="cov">{% if s.cover %}<img src="{{ s.cover }}" alt="">{% endif %}</div>
+            <div class="cov">{% if s.cover %}<img src="{{ s.cover }}" alt="" style="transform-origin: center {{ s.cover_focus }}">{% endif %}</div>
             <div><strong>{{ s.title }}</strong><span>{% if s.ready %}20 pages · they play {{ s.hero }}{% else %}Coming soon{% endif %}</span></div>
           </label>
         {% endfor %}
