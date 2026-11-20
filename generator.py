@@ -373,7 +373,7 @@ def _make_page(storage, user_id, book_id, s, number, refs, meter, cancel=None):
             png, check, tries = assets.draw_checked(
                 make,
                 lambda img: ai.inspect_page(img, page["scene"], page["text"], refs["jpg"], cast_note, meter=meter,
-                                            face_png=refs["face"]),
+                                            face_png=refs["face"], must=stories.must(s, page)),
                 f"{book_id}/{name}",
                 on_attempt=_progress(storage, user_id, book_id, name),
             )

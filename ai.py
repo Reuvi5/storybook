@@ -248,7 +248,7 @@ REGION_RULES = """"regions": a list of boxes for everything the reader needs to 
 
 
 def inspect_page(page_png: bytes, scene: str, text: str, hero_png: bytes = None, cast_note: str = "",
-                 hero_note: str = None, meter: Meter = None, face_png: bytes = None) -> dict:
+                 hero_note: str = None, meter: Meter = None, face_png: bytes = None, must: str = None) -> dict:
     """Score a finished page. Returns {"score", "passed", "problems", "regions", ...}."""
     if FAKE:
         if meter:
@@ -277,6 +277,11 @@ Inspect image 1 carefully and reply with JSON only:
                     character model, 5 = a sibling or look-alike, 0 = someone else. Be strict. IGNORE the expression:
                     a smile, a frown, wide eyes or an open mouth is fine and must not lower this score; judge only
                     whether it is the same character. 10 if no hero is needed),
+  "hero_build_same": 0-10 (compare the hero's BODY and face fullness in image 1 with the design in image 2: how
+                     slim or chubby they are, the roundness of the cheeks and jaw, head-to-body size, height for their
+                     age. 10 = the same build, 5 = noticeably chubbier, thinner, older or younger, 0 = a different
+                     body. Ignore pose, clothes and expression. 10 if no hero is needed or the body is hidden),
+  "must_ok": true/false ({'does the picture clearly show this: ' + must if must else 'true'}),
   "hero_arms": number (count the hero's arms you can actually see, one by one, following each from the shoulder
                to the hand; 0 if no hero is needed),
   "extra_limbs": true/false (does ANY character have more than two arms, more than two legs, more than two hands,
@@ -303,6 +308,8 @@ Inspect image 1 carefully and reply with JSON only:
         and not r.get("extra_limbs", False)
         and (not hero_needed or arms is None or arms <= 2)
         and (not hero_needed or _number(r.get("hero_face_same")) is None or _number(r.get("hero_face_same")) >= 7)
+        and (not hero_needed or _number(r.get("hero_build_same")) is None or _number(r.get("hero_build_same")) >= 7)
+        and (not must or r.get("must_ok", True) is not False)
         and r.get("cartoon_style", True)
         and not r.get("has_written_text", True)
         and (not hero_needed or (r.get("hero_present") and r.get("hero_face_clear") and r.get("hero_matches_design", 0) >= 7))

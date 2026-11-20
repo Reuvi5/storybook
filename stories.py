@@ -78,7 +78,7 @@ STORIES["jack"] = {
         {"text": "Once upon a time, Jack and his mother lived in a tiny cottage. They were so poor that all they had left was their cow, Milky-White.",
          "zone": "bottom", "cast": ["mother", "cow"],
          "scene": "Outside a small, run-down thatched cottage on a sunny morning. Jack stands by the gate with his mother, both looking at Milky-White, who grazes in front of them. Jack and his mother face the viewer in three-quarter view."},
-        {"text": "\"There is nothing for it,\" said his mother. \"Take Milky-White to market, and sell her for a good price.\"",
+        {"text": "\"We have no money left,\" said his mother sadly. \"Take Milky-White to market, and sell her for a good price.\"",
          "zone": "top", "cast": ["mother", "cow"],
          "scene": "Inside the bare cottage kitchen: an empty cupboard, a cold hearth, one wooden table. Jack's mother, sad and worried, hands Jack a rope tied to Milky-White, who stands at the open door. Jack looks up at her, determined."},
         {"text": "So Jack set off down the long road, leading Milky-White behind him.",
@@ -108,27 +108,27 @@ STORIES["jack"] = {
         {"text": "At the top was a road made of clouds, and at the end of the road stood an enormous castle.",
          "zone": "top", "cast": [],
          "scene": "Above the clouds: Jack steps off the top of the beanstalk onto a road of white clouds, in the foreground, seen in three-quarter view, gazing at an enormous grey stone castle in the distance."},
-        {"text": "A giant woman opened the door. \"Hurry, little one,\" she whispered. \"My husband eats boys for breakfast! Hide!\"",
+        {"text": "A giant woman opened the door. \"Hurry, little one,\" she whispered. \"My husband eats boys for breakfast! Quick, hide in this big pot!\"",
          "zone": "top", "cast": ["giants_wife"],
          "scene": "At the enormous castle door, which is many times taller than Jack. The giant's wife bends down kindly toward Jack, a finger to her lips. Jack looks up at her, startled. Both faces are visible."},
         {"text": "BOOM! BOOM! BOOM! In stomped the giant. \"Fee-fi-fo-fum!\" he roared. \"I smell a boy, I'm sure of one!\"",
          "zone": "top", "cast": ["giant", "giants_wife"],
          "scene": "The giant's huge kitchen. The giant stomps in through a doorway on the right, sniffing the air. In the foreground on the left, Jack is hidden INSIDE an enormous copper cooking pot on the floor: only his head, from the eyes up to his hair plus his hands gripping the rim, peeks over the edge. His eyes and upper face are clearly visible, wide with fear; the rest of him is out of sight inside the pot. The giant has not seen him. The giant's wife stands at the stove looking nervous."},
-        {"text": "After dinner, the giant counted his gold and fell fast asleep. Jack grabbed a bag of gold and raced back down the beanstalk.",
+        {"text": "The giant sniffed all around, but he never found Jack. After dinner, he counted his gold and fell fast asleep. Jack crept out, took a bag of gold, and hurried home.",
          "zone": "top", "cast": ["giant"],
          "scene": "The giant snores in a huge wooden chair, slumped on the right, with gold coins spilled on the table. In the foreground Jack tiptoes away hugging a bag of gold coins, looking back at the viewer with a grin."},
-        {"text": "Jack climbed up again. This time he found the giant's hen, which laid an egg of solid gold whenever the giant said, \"Lay!\"",
+        {"text": "When the gold ran out, Jack climbed up again and hid behind a loaf of bread. The giant had a hen that laid a golden egg whenever he said, \"Lay!\"",
          "zone": "bottom", "cast": ["giant", "hen"],
          "scene": "The giant's kitchen table, enormous. The hen sits on the table beside a shining golden egg; the giant, seated behind, points at it, delighted. Jack is crouched behind an enormous loaf of bread on the table, completely hidden from the giant: only one side of his head peeks out around the loaf, toward the viewer, so his eyes and face are visible to the reader but not to the giant, who is looking at the hen."},
-        {"text": "Then Jack saw a golden harp that sang all by itself. He picked it up, but the harp called out, \"Master! Master!\"",
-         "zone": "top", "cast": ["harp", "giant"],
-         "scene": "Jack holds the golden harp in both arms, facing the viewer with a surprised, alarmed expression; the harp's carved face is singing loudly. Behind him in the background, the giant is just waking up in his chair."},
-        {"text": "The giant woke with a roar and thundered after Jack. Jack ran as fast as his legs could carry him.",
-         "zone": "top", "cast": ["giant", "harp"],
-         "scene": "On the cloud road: Jack sprints toward the viewer holding the harp, with an excited, frightened face. Far behind him, the giant chases, arms outstretched, smaller in the distance. The top of the beanstalk is in front of Jack."},
-        {"text": "\"Mother! Mother! Bring the axe!\" shouted Jack, sliding down the beanstalk.",
-         "zone": "top", "cast": ["mother", "harp"],
-         "scene": "Lower part of the beanstalk near the ground. Jack slides down a thick stem toward the viewer, shouting, with the harp under one arm. Below, his mother runs out of the cottage holding a woodcutter's axe. Jack's face clearly visible."},
+        {"text": "When the giant dozed off, Jack tucked the hen under his arm and picked up a golden harp too. But the harp sang out, \"Master! Master!\"",
+         "zone": "top", "cast": ["harp", "giant", "hen"],
+         "scene": "The giant's kitchen. Jack faces the viewer with a surprised, alarmed expression. He holds the golden harp in one arm and has the hen tucked safely under his other arm. The harp's carved face is singing loudly. Behind him in the background, the giant is just waking up in his chair."},
+        {"text": "The giant woke with a roar and thundered after Jack. Jack ran as fast as he could, holding the hen and the harp tight.",
+         "zone": "top", "cast": ["giant", "harp", "hen"],
+         "scene": "On the cloud road: Jack sprints toward the viewer with the harp in one arm and the hen tucked under the other, with an excited, frightened face. Far behind him, the giant chases, arms outstretched, smaller in the distance. The top of the beanstalk is in front of Jack."},
+        {"text": "\"Mother! Mother! Bring the axe!\" shouted Jack, sliding down the beanstalk with the hen and the harp.",
+         "zone": "top", "cast": ["mother", "harp", "hen"],
+         "scene": "Lower part of the beanstalk near the ground. Jack slides down a thick stem toward the viewer, shouting, with the harp under one arm and the hen riding on his shoulder, flapping. Below, his mother runs out of the cottage holding a woodcutter's axe. Jack's face clearly visible."},
         {"text": "Jack chopped and chopped. Down came the beanstalk with a mighty CRASH, and the giant was never seen again.",
          "zone": "top", "cast": ["mother"],
          "scene": "In the garden: Jack has just swung the axe, the beanstalk is toppling sideways with leaves flying, and a big cloud of dust rises. His mother stands beside him, hands on her cheeks. Jack faces the viewer in three-quarter view, triumphant. No giant is shown."},
@@ -156,7 +156,7 @@ STORIES["red"] = {
         "basket": "The basket: a woven wicker basket with a handle, covered by a red-and-white checked cloth, with a loaf of bread and a jar of honey peeking out. Just the basket on its own: no person, no hands, no character holding it.",
     },
     "pages": [
-        {"text": "Once upon a time there was someone who always wore a bright red hooded cape, so everyone called them Little Red Riding Hood.",
+        {"text": "Once upon a time there was a child who always wore a bright red hooded cape, so everyone called them Little Red Riding Hood.",
          "zone": "bottom", "cast": [],
          "scene": "A pretty village street with timbered houses and flower boxes on a sunny morning. The hero stands in the middle of the street in the red cape, smiling and facing the viewer."},
         {"text": "One morning, Mother packed a basket. \"Grandmother is sick,\" she said. \"Take her this bread and honey. And stay on the path!\"",
@@ -183,13 +183,13 @@ STORIES["red"] = {
         {"text": "Knock, knock. \"Who is it?\" called Grandmother. \"It's me, Little Red Riding Hood,\" said the wolf, in his sweetest voice.",
          "zone": "bottom", "cast": ["wolf"],
          "scene": "Close up of the cottage's red front door. The wolf stands on his hind legs, knocking with one paw and holding the other paw to his mouth, putting on a sweet voice. The hero does not appear on this page."},
-        {"text": "When Grandmother saw the wolf, she jumped out of bed and hid in the wardrobe.",
+        {"text": "The wolf pushed the door open. When Grandmother saw him, she jumped out of bed and hid in the wardrobe.",
          "zone": "top", "cast": ["wolf", "grandmother"],
          "scene": "Inside Grandmother's bedroom. Grandmother, startled, slips into a tall wooden wardrobe and pulls the door almost closed, peeking out. The wolf stands in the bedroom doorway. The hero does not appear on this page."},
         {"text": "Then the wolf put on Grandmother's nightcap and glasses, climbed into her bed, and waited.",
          "zone": "top", "cast": ["wolf"],
          "scene": "Grandmother's bedroom. The wolf lies in the bed with the blanket pulled up, wearing Grandmother's frilly nightcap and round glasses, grinning. The hero does not appear on this page."},
-        {"text": "Soon Little Red Riding Hood arrived with the basket and the flowers. The door was standing open.",
+        {"text": "Soon Little Red Riding Hood arrived with the basket and the flowers. The door was standing open, so in they went.",
          "zone": "top", "cast": ["basket"],
          "scene": "Outside the cottage with the red door, which stands slightly open. The hero stands on the doorstep holding the basket and a bunch of flowers, looking at the open door, puzzled."},
         {"text": "\"Oh, Grandmother, what big ears you have!\" \"All the better to hear you with, my dear.\"",
@@ -213,7 +213,7 @@ STORIES["red"] = {
         {"text": "The wolf ran deep into the forest, and he was never seen in those woods again.",
          "zone": "bottom", "cast": ["wolf"],
          "scene": "The forest seen from the cottage window at sunset: the wolf, small in the distance, runs off over a hill into the trees, looking back nervously. The hero leans out of the window in the foreground, watching, smiling, face fully visible."},
-        {"text": "Then they all sat down to bread, honey and tea. And Little Red Riding Hood never strayed from the path again.",
+        {"text": "Soon Mother came by too, and everyone sat down to bread, honey and tea. And Little Red Riding Hood never strayed from the path again.",
          "zone": "top", "cast": ["grandmother", "woodcutter", "mother", "basket"],
          "scene": "Grandmother's cozy table by the fire. Grandmother, Mother, the woodcutter and the hero share bread, honey and tea, laughing. The hero sits in the front, facing the viewer, smiling."},
     ],
@@ -364,6 +364,31 @@ EXPRESSIONS = {
 }
 
 
+# What a page MUST show about the hero, where the story depends on it. Told to the drawing and checked after.
+MUST = {
+    "jack": {
+        13: "Jack is HIDDEN inside the big copper pot: only his eyes, the top of his head and his fingers on the rim "
+            "show above its edge. His body is NOT visible and he is NOT standing up. The giant is not looking at him.",
+        14: "The giant is fast asleep with his eyes closed while Jack tiptoes away.",
+        15: "Jack is HIDDEN, crouching behind the huge loaf of bread: only part of his face peeks out around it, toward "
+            "the viewer. He is NOT standing in the open. The giant is looking at the hen, never at Jack.",
+        16: "Jack holds the golden harp in one arm and has the hen tucked under his other arm.",
+        17: "Jack is carrying both the hen and the golden harp.",
+        18: "Jack has both the hen and the golden harp with him as he slides down.",
+    },
+}
+
+
+def must(s: dict, page: dict):
+    return MUST.get(s["id"], {}).get(page.get("number", 0))
+
+
+# The picture shown for each story on the home page and the New book page (a story page number).
+SHOWCASE = {"jack": 10, "red": 5}
+# Three more pages shown as samples on the home page.
+SAMPLES = {"jack": (5, 13, 17), "red": (4, 15, 18)}
+
+
 def expression(s: dict, page: dict) -> str:
     faces = EXPRESSIONS.get(s["id"], [])
     n = page.get("number", 0)
@@ -392,10 +417,15 @@ def swap_prompt(s: dict, page: dict, head_hidden: bool = False) -> str:
         "and color, eyebrow shape, nose, mouth shape, ears, cheeks, freckles, hairline, hair color and curls, and the "
         "same apparent age. Do not redesign, simplify, age up or age down the face. It must stay clearly visible, "
         "front-lit and recognizable. Copy the face's SHAPES and FEATURES, drawn in the same cartoon style as image 2.\n\n"
+        "BODY: exactly image 2's build, weight and proportions. Never make the hero chubbier, rounder, heavier, "
+        "thinner, taller, shorter, older or younger than image 2, in the face or the body.\n\n"
         f"EXPRESSION ON THIS PAGE: {expression(s, page)}, to fit this moment in the story. Image 3 shows what the face "
-        "looks like, not which expression to use. Show the expression only with the mouth, eyebrows, eyelids and "
-        "cheeks, the way an animator draws the same character happy, worried or surprised: the character must still "
-        "be instantly recognizable as image 3. Keep it natural and gentle, never exaggerated or distorted.\n\n"
+        "looks like, not which expression to use. Show the expression only with the mouth, eyebrows and eyelids, "
+        "the way an animator draws the same character happy, worried or surprised: the character must still be "
+        "instantly recognizable as image 3, and the face must not get rounder, wider or fuller. Keep it natural and "
+        "gentle, never exaggerated or distorted.\n\n"
+        + (f"THIS PAGE MUST SHOW: {must(s, page)} If the hero is hiding in image 1, keep them hidden exactly as in "
+           "image 1 and never draw the rest of their body.\n\n" if must(s, page) else "") +
         f"{CARTOON_ONLY}\n\n"
         "Change NOTHING else: keep every other character, the background, the colors, the composition and any empty areas "
         f"exactly as they are in image 1. {NO_TEXT}"

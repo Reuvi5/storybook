@@ -211,8 +211,8 @@ def story_cards() -> list:
     cards = []
     for s in stories.STORIES.values():
         ready = assets.story_ready(storage, s["id"])
-        cover = file_url(story_key(s["id"], "plates/thumb-01.jpg")) if ready else None
-        samples = [file_url(story_key(s["id"], f"plates/thumb-{n:02d}.jpg")) for n in (4, 11, 17)] if ready else []
+        cover = file_url(story_key(s["id"], f"plates/thumb-{stories.SHOWCASE.get(s['id'], 1):02d}.jpg")) if ready else None
+        samples = [file_url(story_key(s["id"], f"plates/thumb-{n:02d}.jpg")) for n in stories.SAMPLES.get(s["id"], (4, 11, 17))] if ready else []
         cards.append({"id": s["id"], "title": s["title"], "hero": s["hero_name"], "ready": ready, "cover": cover,
                       "samples": samples, "blurb": s["pages"][0]["text"]})
     return cards
