@@ -1,41 +1,81 @@
-# Storybook: Jack and the Beanstalk
+# Storybook
 
-A cartoon *Jack and the Beanstalk* starring the person in an uploaded photo. Sign in with
-Google, make a book, watch each picture appear as it's drawn, and download it as one PDF.
-Books are saved to your account, so they're still there when you come back.
+A 20-page picture book starring the child in an uploaded photo: **"Simcha and the Beanstalk"** or
+**Little Red Riding Hood, featuring Meira**. Sign in with Google, add funds, make a book in about a
+minute, download it as a PDF, or order a printed hardcover.
 
 Live site: https://storybook.kupchikgames.shop
 
-## How it works
+## How the code is organized
 
-1. **Sign in with Google** (`auth.py`), using OAuth credentials from Google Cloud Console.
-2. The uploaded photo becomes **one character design** of the person as Jack (one image call).
-3. Every story page is drawn from **that character image**, not the photo, with the same
-   style wording on every call, so Jack looks the same on every page. The pages are drawn
-   **in parallel**, in a background thread (`generator.py`).
-4. The book page polls the server every 2 seconds and shows a **progress bar per image**.
-5. Each user's books are **stored in AWS** (`storage.py`): records in DynamoDB, images in a
-   private S3 bucket. Locally, without AWS settings, they go in `local_data/` instead.
-6. The **PDF** (`book.py`): cover, pages 1–3 with the story text drawn on top (never by the
-   image model), and an About Me page with the real photo next to the cartoon.
-7. **Logging**: sign-ins, books, each image's result and timing, downloads and errors go to the
-   console (Render → Logs).
+```
+app.py                  the entry point (Render runs: gunicorn app:app)
+storybook/
+  content/              what a book says and looks like
+    stories.py            the two stories: text, scenes, the child's name, expressions, page rules
+    layout.py             where the words go on each page (never over a face)
+    pdf.py                the PDFs: the book to download, and the print files (cover + inside)
+    legacy.py             books made before the 20-page template
+  making/               turning a photo into a finished book
+    ai.py                 OpenAI: drawing and checking pictures, and what each call costs
+    checks.py             checking what the parent types (real name, kind, no contact details)
+    assets.py             the ready-made scenes and characters every book starts from
+    generator.py          making one book, start to finish, in the background
+  money/
+    ledger.py             the wallet: funds, $0.99 per book, refunds, printed copies
+    printing.py           Lulu's print API (sandbox only)
+  web/                  the website (Flask)
+    __init__.py           app setup, template helpers, error pages
+    pages.py              home, new book, book page, my books, downloads
+    wallet.py  orders.py  auth.py
+  storage.py            DynamoDB + S3 (or a local folder when testing)
+scripts/                command-line tools
+  prepare_story.py        draw the ready-made scenes (run once per story, or to redraw pages)
+  lulu_check.py           check the Lulu keys and get a real price quote
+  stats.py                cost statistics
+tests/                  one folder per part: content, making, money, web
+templates/  fonts/  samples/
+```
 
-The prompts and pages are in `story.py`. Adding page 4 means adding one entry to `PAGES`.
+## How a book is made
 
-## Setup
+1. The photo becomes **one character design** of the child (checked: same person, cartoon style).
+2. Each of the 20 pages starts from a **ready-made scene** drawn once per story with a stand-in
+   child. The stand-in's face is blurred out and the child is drawn in, with an expression that
+   fits the moment. All 20 pages are drawn **in parallel**.
+3. Every picture is **checked** by a vision model: same face and body as the character, two arms,
+   child-sized next to adults, the page's rules (Jack hidden in the pot, the wolf leaving through
+   the window...). Up to 3 tries; the best one is kept.
+4. The words are placed on the plainest part of each page (never over a face) and the book is
+   saved as a **24-page PDF**: cover, copyright page, 20 pages, The End, About Me.
+5. Everything is **stored in AWS**, so books are still there next time. Every step is logged.
 
-See **[SETUP.md](SETUP.md)** for Google sign-in, AWS and Render, step by step.
+## Run it locally
 
-Quick local run:
 ```bash
 python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env      # then fill in your keys
+pip install -r requirements-dev.txt
+cp .env.example .env      # then fill in your keys (see SETUP.md)
 python app.py             # http://localhost:5001
 ```
-Set `FAKE_IMAGES=1` in `.env` to test with free placeholder images.
+Set `FAKE_IMAGES=1` and `FAKE_PRINT=1` in `.env` to try it with free placeholder pictures.
 
-## What still needs work
+## Run the tests
 
-See [to-do.md](to-do.md).
+The tests run offline in test mode: placeholder pictures, a pretend printer, a temporary data
+folder. No OpenAI, Stripe, Lulu or AWS calls, even if your `.env` has real keys.
+
+```bash
+pytest                       # everything (about 10 seconds)
+pytest tests/content         # stories, page layout, PDFs
+pytest tests/making          # the detail checks, the page check, scenes, making a whole book
+pytest tests/money           # the wallet and printing
+pytest tests/web             # the pages, the New book form, printed orders
+pytest -k refund             # just the tests with "refund" in their name
+```
+
+## More
+
+- [SETUP.md](SETUP.md): Google sign-in, AWS, Stripe, Lulu and Render, step by step
+- [WRITEUP.md](WRITEUP.md): what was built, the business model and pricing
+- [to-do.md](to-do.md) and [review-log.md](review-log.md): open defects and review runs

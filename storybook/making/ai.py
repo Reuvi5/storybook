@@ -28,6 +28,7 @@ IMAGE_MODEL = os.environ.get("IMAGE_MODEL", "gpt-image-2")
 VISION_MODEL = os.environ.get("VISION_MODEL", "gpt-5-mini")
 SIZE = "1024x1536"  # portrait, the same 2:3 shape as the book page
 FAKE = os.environ.get("FAKE_IMAGES") == "1"
+FAST = bool(os.environ.get("FAKE_FAST"))  # tests: skip the pretend drawing time
 
 _client = None
 
@@ -132,7 +133,8 @@ def draw(prompt: str, refs=(), quality: str = "low", label: str = "", meter: Met
 
 
 def _placeholder(label: str, fmt: str = "png") -> bytes:
-    time.sleep(random.uniform(1.5, 4))
+    if not FAST:
+        time.sleep(random.uniform(1.5, 4))
     with IMAGE_WORK:
         return _draw_placeholder(label, fmt)
 
@@ -414,7 +416,8 @@ def _clean_regions(regions) -> list:
 
 def _fake_inspection(png: bytes) -> dict:
     """Test mode: find the placeholder's drawn "character" and pass most of the time."""
-    time.sleep(random.uniform(0.3, 1.0))
+    if not FAST:
+        time.sleep(random.uniform(0.3, 1.0))
     img = open_small(png, 150).resize((100, 150))
     px = img.load()
     xs, ys = [], []

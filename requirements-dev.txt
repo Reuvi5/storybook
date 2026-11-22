@@ -1,0 +1,4 @@
+# For running the tests (not needed on Render)
+-r requirements.txt
+pytest>=8
+pypdf>=4

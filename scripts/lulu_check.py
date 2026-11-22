@@ -1,7 +1,7 @@
 """
 Check the Lulu sandbox keys and see what one printed book really costs. Places NO order.
 
-    python lulu_check.py
+    python scripts/lulu_check.py
 
 Reads LULU_CLIENT_KEY / LULU_CLIENT_SECRET from .env, then asks Lulu's sandbox:
   1. sign in (are the keys right?)
@@ -10,16 +10,20 @@ Reads LULU_CLIENT_KEY / LULU_CLIENT_SECRET from .env, then asks Lulu's sandbox:
 It prints the per-book math. It never prints the keys.
 """
 
-import json
 import os
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the repo, for "storybook"
+
+
+import json
 
 from dotenv import load_dotenv
 
 load_dotenv()
 os.environ.pop("FAKE_PRINT", None)
 
-import printing  # noqa: E402  (needs the settings loaded first)
+from storybook.money import printing  # noqa: E402  (needs the settings loaded first)
 
 SAMPLE = {"name": "Sample Parent", "street1": "700 Park Offices Dr", "street2": "Suite 250",
           "city": "Research Triangle Park", "state_code": "NC", "postcode": "27709",

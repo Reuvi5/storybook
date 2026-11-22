@@ -19,9 +19,9 @@ from concurrent.futures import ThreadPoolExecutor
 
 from PIL import Image, ImageDraw
 
-import ai
-import stories
-from storage import story_key
+from storybook.making import ai
+from storybook.content import stories
+from storybook.storage import story_key
 
 log = logging.getLogger("storybook.assets")
 

@@ -104,7 +104,7 @@ def busyness(art: bytes):
     """A function rect -> how busy the picture is there (average edge strength, 0-255), measured on a
     small copy. Plain areas measure about 1-5, characters and detailed scenery 15-40."""
     from PIL import ImageFilter
-    import ai
+    from storybook.making import ai
     with ai.IMAGE_WORK:
         img = Image.open(io.BytesIO(art))
         if img.format == "JPEG":
@@ -180,7 +180,7 @@ def _theme(art_png, rect):
     """Light panel with dark text over light art; dark panel with light text over dark art."""
     if not art_png:
         return "light"
-    import ai
+    from storybook.making import ai
     with ai.IMAGE_WORK:
         return _theme_of(art_png, rect)
 
@@ -193,7 +193,8 @@ def _theme_of(art_png, rect):
     iw, ih = img.size
     x0, y0, x1, y1 = rect
     crop = img.crop((int(x0 / W * iw), int((H - y1) / H * ih), int(x1 / W * iw), int((H - y0) / H * ih)))
-    pixels = list(crop.resize((40, 20)).getdata())
+    small = crop.resize((40, 20))
+    pixels = list(small.get_flattened_data() if hasattr(small, "get_flattened_data") else small.getdata())
     return "light" if sum(pixels) / len(pixels) > 105 else "dark"
 
 

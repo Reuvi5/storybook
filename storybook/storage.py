@@ -575,6 +575,6 @@ def get_storage():
         region = os.environ.get("AWS_REGION", "us-east-1")
         log.info("storage=aws table=%s bucket=%s region=%s", table, bucket, region)
         return AwsStorage(table, bucket, region)
-    root = Path(os.environ.get("LOCAL_DATA_DIR", Path(__file__).parent / "local_data"))
+    root = Path(os.environ.get("LOCAL_DATA_DIR", Path(__file__).resolve().parent.parent / "local_data"))  # repo/local_data
     log.warning("storage=local folder=%s (set S3_BUCKET and DYNAMODB_TABLE to use AWS)", root)
     return LocalStorage(root)

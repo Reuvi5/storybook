@@ -53,7 +53,7 @@ Two products, paid from a prepaid wallet that's topped up with Stripe:
 
 ## Cost per printed book
 
-The Lulu numbers are a real sandbox quote (`python lulu_check.py`) for a 6 × 9 full-color premium hardcover with 24 pages, shipped by MAIL to a North Carolina address.
+The Lulu numbers are a real sandbox quote (`python scripts/lulu_check.py`) for a 6 × 9 full-color premium hardcover with 24 pages, shipped by MAIL to a North Carolina address.
 
 | | Cost |
 |---|---:|

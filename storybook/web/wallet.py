@@ -16,8 +16,8 @@ import os
 import stripe
 from flask import Blueprint, abort, current_app, flash, jsonify, redirect, render_template, request, url_for
 
-import ledger
-from auth import current_user, login_required
+from storybook.money import ledger
+from storybook.web.auth import current_user, login_required
 
 log = logging.getLogger("storybook.wallet")
 bp = Blueprint("wallet", __name__)

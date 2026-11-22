@@ -160,15 +160,15 @@ jobs stay "unpaid" and are never printed. To test the flow with no Lulu account 
 Each book uses a character bible and 20 scenes per story that are drawn ahead of time and saved to
 AWS. Make them once, from your own computer (your `.env` has the OpenAI key and the AWS settings):
 ```
-python prepare_story.py all
+python scripts/prepare_story.py all
 ```
 It takes about 15–25 minutes and costs a few dollars, once. When it's done, open
 `prepared/jack-sheet.jpg` and `prepared/red-sheet.jpg`: every character and scene, with its quality
 score and the boxes where text is not allowed (red = faces, orange = characters, blue = objects).
 Redraw anything you don't like:
 ```
-python prepare_story.py jack --pages 5,12      # redraw scenes
-python prepare_story.py red --chars wolf       # redraw a character (then redraw its pages)
+python scripts/prepare_story.py jack --pages 5,12      # redraw scenes
+python scripts/prepare_story.py red --chars wolf       # redraw a character (then redraw its pages)
 ```
 Render reads the same AWS table and bucket, so there's nothing to upload.
 

@@ -23,3 +23,6 @@ outputs/
 
 # Contact sheets from prepare_story.py
 prepared/
+
+# test runs
+.pytest_cache/

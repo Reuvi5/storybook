@@ -22,7 +22,7 @@ from reportlab.lib.colors import Color
 from reportlab.lib.utils import ImageReader, simpleSplit
 from reportlab.pdfgen import canvas
 
-import story
+from storybook.content import legacy as story
 
 # 6 x 9 inch pages: the same 2:3 shape as the 1024x1536 images, so art fills the page exactly.
 W, H = 432, 648
@@ -227,7 +227,7 @@ def _build_pdf(name: str, details: list, images: dict) -> bytes:
 # ===========================================================================
 # Version 2: the 20-page template (template.py), shared by both stories
 # ===========================================================================
-import template as T  # noqa: E402
+from storybook.content import layout as T  # noqa: E402
 
 PAPER = Color(0.99, 0.96, 0.89)
 INK = Color(0.23, 0.15, 0.08)
@@ -323,13 +323,13 @@ def _story_page_v2(c, art_png, layout, bleed=0):
 
 def full_title(story, name):
     """"Simcha and the Beanstalk" / "Little Red Riding Hood, featuring Meira"."""
-    import stories
+    from storybook.content import stories
     title = stories.book_title(story, name)
     return title if story.get("title_with_name") else f"{title}, featuring {name}"
 
 
 def copyright_lines(story, name, book_id, made_at):
-    import stories
+    from storybook.content import stories
     import time as _t
     year = _t.strftime("%Y", _t.gmtime(made_at))
     month = _t.strftime("%B %Y", _t.gmtime(made_at))
@@ -386,7 +386,7 @@ def _the_end_page(c, story, name, bleed=0):
 # bleed, with a big playful title in the band that picture leaves empty for words, so it never covers a
 # face. Jack's book is named after the child ("SIMCHA and the Beanstalk"); Red Riding Hood keeps her
 # title with a "FEATURING MEIRA" ribbon. cover_spec() is shared by the PDF, the print cover and the web.
-FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+FONT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "fonts")  # repo/fonts
 TITLE_FONT = STORY_FONT
 try:
     from reportlab.pdfbase import pdfmetrics
@@ -407,7 +407,7 @@ def _fit(text, font, size, width):
 
 
 def cover_spec(story: dict, name: str) -> dict:
-    import stories
+    from storybook.content import stories
     n = stories.SHOWCASE.get(story["id"])
     zone = story["pages"][n - 1].get("zone", "top") if n else "top"
     where = "bottom" if zone.startswith("bottom") else "top"
@@ -594,7 +594,7 @@ def _about_me_v2(c, name, details, hero_png, photo, background=True):
 
 def _cover_art(story, pages):
     """The finished picture of the story's showcase page, used full-bleed on the front cover."""
-    import stories
+    from storybook.content import stories
     n = stories.SHOWCASE.get(story["id"])
     if pages and n and n <= len(pages):
         return pages[n - 1][0]

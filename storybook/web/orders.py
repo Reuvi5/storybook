@@ -20,13 +20,13 @@ import time
 
 from flask import Blueprint, abort, current_app, flash, redirect, render_template, request, url_for
 
-import book as pdf
-import generator
-import ledger
-import printing
-import stories
-from auth import current_user, login_required
-from storage import book_key
+from storybook.content import pdf
+from storybook.making import generator
+from storybook.money import ledger
+from storybook.money import printing
+from storybook.content import stories
+from storybook.web.auth import current_user, login_required
+from storybook.storage import book_key
 
 log = logging.getLogger("storybook.orders")
 bp = Blueprint("orders", __name__)

@@ -21,13 +21,13 @@ import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-import ai
-import assets
-import book as pdf
-import ledger
-import stories
-import template
-from storage import book_key
+from storybook.making import ai
+from storybook.making import assets
+from storybook.content import pdf
+from storybook.money import ledger
+from storybook.content import stories
+from storybook.content import layout as template
+from storybook.storage import book_key
 
 log = logging.getLogger("storybook.generator")
 

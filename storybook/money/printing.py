@@ -21,7 +21,7 @@ import requests
 
 log = logging.getLogger("storybook.printing")
 
-BASE = os.environ.get("LULU_API_BASE", "https://api.sandbox.lulu.com").rstrip("/")
+BASE = (os.environ.get("LULU_API_BASE") or "https://api.sandbox.lulu.com").rstrip("/")  # empty counts as unset
 TOKEN_URL = f"{BASE}/auth/realms/glasstree/protocol/openid-connect/token"
 # 6"x9" (0600X0900), full color (FC), premium (PRE), casewrap hardcover (CW), 80# coated white paper (080CW444),
 # gloss cover (G), no linen (X), no foil (X)

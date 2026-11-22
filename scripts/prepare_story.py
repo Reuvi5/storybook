@@ -4,24 +4,28 @@ them to the database (the same AWS table and bucket the app uses, from .env).
 
 Run from the storybook folder, with the venv on:
 
-    python prepare_story.py all                  # both stories, everything (about 15-25 minutes)
-    python prepare_story.py jack                 # just Jack and the Beanstalk
-    python prepare_story.py red --pages 4,7      # redraw only pages 4 and 7 of Red Riding Hood
-    python prepare_story.py jack --chars cow     # redraw one bible character (then redraw the pages it's in)
-    python prepare_story.py jack --chars cow --pages 1,2,3   # both in one run
-    python prepare_story.py all --sheet          # only rebuild the contact sheets for review
-    python prepare_story.py red --recheck        # re-inspect the scenes (where text can go) without redrawing
+    python scripts/prepare_story.py all                  # both stories, everything (about 15-25 minutes)
+    python scripts/prepare_story.py jack                 # just Jack and the Beanstalk
+    python scripts/prepare_story.py red --pages 4,7      # redraw only pages 4 and 7 of Red Riding Hood
+    python scripts/prepare_story.py jack --chars cow     # redraw one bible character (then redraw the pages it's in)
+    python scripts/prepare_story.py jack --chars cow --pages 1,2,3   # both in one run
+    python scripts/prepare_story.py all --sheet          # only rebuild the contact sheets for review
+    python scripts/prepare_story.py red --recheck        # re-inspect the scenes (where text can go) without redrawing
 
 Each run writes a contact sheet to prepared/<story>-sheet.jpg, and full-size copies of every image
 to prepared/<story>/, so you can look at them.
 Cost: roughly 70 images at medium quality, plus the checks. A few dollars in total, once.
 """
 
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # the repo, for "storybook"
+
+
 import argparse
 import io
 import logging
-import os
-import sys
 import time
 
 from dotenv import load_dotenv
@@ -30,9 +34,9 @@ load_dotenv()
 
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
-import assets  # noqa: E402
-import stories  # noqa: E402
-from storage import get_storage  # noqa: E402
+from storybook.making import assets  # noqa: E402
+from storybook.content import stories  # noqa: E402
+from storybook.storage import get_storage  # noqa: E402
 
 
 def _font(size):

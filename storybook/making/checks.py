@@ -23,7 +23,7 @@ import os
 import re
 import unicodedata
 
-import ai
+from storybook.making import ai
 
 log = logging.getLogger("storybook.checks")
 
