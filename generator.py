@@ -346,7 +346,7 @@ def _face_closeup(png, box):
 def book_words(book: dict):
     """The child's name and pronoun for the story text (older books have no pronoun: the story's default)."""
     d = (book or {}).get("details", {})
-    return d.get("name"), d.get("pronoun")
+    return d.get("name"), None  # the story always says "they" for the child
 
 
 def _hero_refs(storage, user_id, book_id, hero):

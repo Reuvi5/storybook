@@ -100,14 +100,6 @@
       <label class="f" for="name">Name</label>
       <input type="text" id="name" name="name" maxlength="40" required value="{{ values.get('name', '') }}" {% if field_errors and field_errors.name %}class="bad" aria-invalid="true"{% endif %}>
       {% if field_errors and field_errors.name %}<div class="ferr">{{ field_errors.name }}</div>{% endif %}
-      <div class="f" id="pronoun-label" style="margin-top:16px">Your child is a</div>
-      <div class="choice" role="radiogroup" aria-labelledby="pronoun-label">
-        {% for v, label in [('he', 'Boy'), ('she', 'Girl')] %}
-          <label class="pill-opt"><input type="radio" name="pronoun" value="{{ v }}" required {{ 'checked' if values.get('pronoun') == v }}><span>{{ label }}</span></label>
-        {% endfor %}
-      </div>
-      <p class="hint">So the story says "he" or "she".</p>
-      {% if field_errors and field_errors.pronoun %}<div class="ferr">{{ field_errors.pronoun }}</div>{% endif %}
       <div class="grid">
         {% for key, label, max_len in details if key != 'about' %}
           <div>

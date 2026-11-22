@@ -10,7 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --ink: #172046; --muted: #5f6585; --paper: #fbf9f4; --card: #ffffff; --line: #ece4d6;
+      --ink: #172046; --muted: #55607f; --paper: #e8f2ff; --card: #ffffff; --line: #d6e2f3;
       --brand: #2f6fed; --brand-dark: #1d4fc4; --brand-soft: #e7efff; --sky: #8ec5ff; --sky-soft: #eaf4ff;
       --sun: #ffc845; --sun-soft: #fff4d4; --coral: #ff6f59; --coral-soft: #ffece7;
       --mint: #22a77a; --good: #1b8f63; --good-soft: #e3f6ed;
@@ -25,10 +25,11 @@
       margin: 0; font-family: var(--sans); color: var(--ink); font-size: 16px; line-height: 1.55; -webkit-font-smoothing: antialiased;
       background-color: var(--paper);
       background-image:
-        radial-gradient(1300px 560px at 85% -160px, rgba(47,111,237,.20), transparent 70%),
-        radial-gradient(900px 420px at -10% -60px, rgba(255,200,69,.22), transparent 70%),
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cg fill='%232f6fed' fill-opacity='.07'%3E%3Cpath d='M30 22l1.6 4.4 4.4 1.6-4.4 1.6L30 34l-1.6-4.4L24 28l4.4-1.6z'/%3E%3Ccircle cx='118' cy='40' r='2'/%3E%3Ccircle cx='70' cy='110' r='1.6'/%3E%3Cpath d='M128 112l1.2 3.3 3.3 1.2-3.3 1.2-1.2 3.3-1.2-3.3-3.3-1.2 3.3-1.2z'/%3E%3Ccircle cx='20' cy='138' r='1.4'/%3E%3C/g%3E%3C/svg%3E");
-      background-repeat: no-repeat, no-repeat, repeat;
+        radial-gradient(900px 420px at 85% -80px, rgba(255,255,255,.75), transparent 70%),
+        radial-gradient(700px 360px at -5% 0, rgba(255,214,110,.28), transparent 70%),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cg fill='%23ffffff' fill-opacity='.7'%3E%3Cpath d='M30 22l1.6 4.4 4.4 1.6-4.4 1.6L30 34l-1.6-4.4L24 28l4.4-1.6z'/%3E%3Ccircle cx='118' cy='40' r='2'/%3E%3Ccircle cx='70' cy='110' r='1.6'/%3E%3Cpath d='M128 112l1.2 3.3 3.3 1.2-3.3 1.2-1.2 3.3-1.2-3.3-3.3-1.2 3.3-1.2z'/%3E%3Ccircle cx='20' cy='138' r='1.4'/%3E%3C/g%3E%3C/svg%3E"),
+        linear-gradient(180deg, #bcdcff 0px, #d6e9ff 360px, #e8f2ff 900px);
+      background-repeat: no-repeat, no-repeat, repeat, no-repeat;
       min-height: 100vh; display: flex; flex-direction: column;
     }
     a { color: var(--brand); text-underline-offset: 3px; }
@@ -36,7 +37,7 @@
 
     /* header */
     header::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px; background: linear-gradient(90deg, #2f6fed, #8ec5ff 35%, #ffc845 65%, #ff6f59); }
-    header { position: sticky; top: 0; z-index: 10; background: rgba(253,248,239,.86); backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid rgba(236,228,214,.9); }
+    header { position: sticky; top: 0; z-index: 10; background: rgba(226,239,255,.86); backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid rgba(190,212,245,.9); }
     .bar { max-width: 1160px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
     .brand { display: inline-flex; align-items: center; gap: 10px; font-family: var(--serif); font-weight: 700; font-size: 22px; color: var(--ink); text-decoration: none; margin-right: auto; letter-spacing: -.01em; }
     .brand .mark { width: 36px; height: 36px; flex: none; filter: drop-shadow(0 3px 0 rgba(29,79,196,.25)); transition: transform .2s; }
@@ -69,7 +70,7 @@
     h2 { font-family: var(--serif); font-weight: 600; font-size: 23px; line-height: 1.25; margin: 0 0 12px; }
     @media (max-width: 600px) { h1 { font-size: 31px; } h2 { font-size: 21px; } }
     .sub { color: var(--muted); margin: 0 0 28px; font-size: 18px; }
-    .card { background: var(--card); border-radius: var(--radius); padding: 26px; box-shadow: var(--shadow); border: 1px solid rgba(236,228,214,.7); }
+    .card { background: var(--card); border-radius: var(--radius); padding: 26px; box-shadow: var(--shadow); border: 1px solid rgba(214,226,243,.7); }
     @media (max-width: 600px) { .card { padding: 20px; border-radius: 18px; } }
 
     /* buttons: chunky and pressable */

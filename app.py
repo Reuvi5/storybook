@@ -221,7 +221,7 @@ def story_cards() -> list:
         cover = showcase["url"] if showcase else None
         samples = [pic(n) for n in stories.SAMPLES.get(s["id"], (4, 11, 17))] if ready else []
         cards.append({"id": s["id"], "title": s["title"], "hero": s["hero_name"], "ready": ready, "cover": cover, "cover_focus": showcase["focus"] if showcase else "center",
-                      "samples": samples, "blurb": s["pages"][0]["text"]})
+                      "samples": samples, "blurb": stories.page_text(s, s["pages"][0], "your child")})
     return cards
 
 
@@ -293,8 +293,6 @@ def make():
     user = current_user()
 
     values = {"name": proper_name(request.form.get("name", ""))}
-    pronoun = request.form.get("pronoun", "")
-    values["pronoun"] = pronoun if pronoun in ("he", "she") else ""
     for key, _label, max_len in DETAILS:
         values[key] = request.form.get(key, "").strip()[:max_len]
     story_id = request.form.get("story", "")
@@ -309,8 +307,6 @@ def make():
         return form_error("That story isn't ready yet. Please choose the other one.")
     if not values["name"]:
         return form_error("Please enter the name.")
-    if not values["pronoun"]:
-        return form_error("Please choose boy or girl, so the story says he or she.", {"pronoun": "Please choose one."})
     upload = request.files.get("photo")
     if not upload or not upload.filename:
         return form_error("Please upload a photo.")
@@ -323,7 +319,7 @@ def make():
 
     # Nothing inappropriate gets drawn or printed: check the name and About Me before charging.
     check_meter = ai.Meter()
-    problems = checks.check_details({k: v for k, v in values.items() if k != "pronoun"}, check_meter)
+    problems = checks.check_details(values, check_meter)
     if problems.get("_service"):
         return form_error(problems["_service"])
     if problems:

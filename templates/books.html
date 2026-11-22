@@ -6,7 +6,7 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 30px 26px; }
   @media (max-width: 480px) { .grid { grid-template-columns: 1fr 1fr; gap: 22px 16px; } }
   .item { text-decoration: none; color: var(--ink); display: block; }
-  .thumb { position: relative; aspect-ratio: 2 / 3; border-radius: 5px 14px 14px 5px; overflow: hidden; background: #ece4d6; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; font-weight: 700; text-align: center; padding: 0;
+  .thumb { position: relative; aspect-ratio: 2 / 3; border-radius: 5px 14px 14px 5px; overflow: hidden; background: #d6e2f3; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; font-weight: 700; text-align: center; padding: 0;
            box-shadow: inset 6px 0 0 rgba(0,0,0,.16), inset 8px 0 0 rgba(255,255,255,.14), 0 14px 28px rgba(31,32,65,.18), 0 3px 8px rgba(31,32,65,.10); transition: transform .2s ease, box-shadow .2s ease; }
   .thumb::after { content: ""; position: absolute; inset: 0; box-shadow: inset 6px 0 0 rgba(0,0,0,.16), inset 8px 0 0 rgba(255,255,255,.14); border-radius: inherit; pointer-events: none; }
   .item:hover .thumb { transform: translateY(-5px) rotate(-1.5deg); box-shadow: 0 22px 36px rgba(31,32,65,.22), 0 4px 10px rgba(31,32,65,.12); }
@@ -15,7 +15,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .thumb.jack { background: #2e5c38; }
   .thumb.red { background: #8c1f1f; }
-  .thumb.plain { background: #ece4d6; flex-direction: column; }
+  .thumb.plain { background: #d6e2f3; flex-direction: column; }
   .flag { position: absolute; left: 14px; top: 10px; z-index: 2; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15); }
   .flag.done { color: var(--good); }
   .flag.wait { color: #8a5a00; background: var(--sun-soft); }
