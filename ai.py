@@ -281,6 +281,8 @@ Inspect image 1 carefully and reply with JSON only:
                      slim or chubby they are, the roundness of the cheeks and jaw, head-to-body size, height for their
                      age. 10 = the same build, 5 = noticeably chubbier, thinner, older or younger, 0 = a different
                      body. Ignore pose, clothes and expression. 10 if no hero is needed or the body is hidden),
+  "hero_scale_ok": true/false (the hero is a child: if a standing adult is near the hero, is the hero clearly
+                   shorter, with the top of the head at about the adult's shoulder or lower? true if no adult or no hero),
   "must_ok": true/false ({'does the picture clearly show this: ' + must if must else 'true'}),
   "hero_arms": number (count the hero's arms you can actually see, one by one, following each from the shoulder
                to the hand; 0 if no hero is needed),
@@ -310,6 +312,7 @@ Inspect image 1 carefully and reply with JSON only:
         and (not hero_needed or _number(r.get("hero_face_same")) is None or _number(r.get("hero_face_same")) >= 7)
         and (not hero_needed or _number(r.get("hero_build_same")) is None or _number(r.get("hero_build_same")) >= 7)
         and (not must or r.get("must_ok", True) is not False)
+        and (not hero_needed or r.get("hero_scale_ok", True) is not False)
         and r.get("cartoon_style", True)
         and not r.get("has_written_text", True)
         and (not hero_needed or (r.get("hero_present") and r.get("hero_face_clear") and r.get("hero_matches_design", 0) >= 7))

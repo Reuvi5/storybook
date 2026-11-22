@@ -247,8 +247,8 @@ PUBLISHER_URL = os.environ.get("PUBLISHER_URL", "storybook.kupchikgames.shop")
 # patch of light (or shade, on dark art) that fades into the picture, and a faint glow around the letters.
 # The layout already puts the words on the plainest part of the page, so this is enough to read them easily.
 GLOW = {
-    "light": ((255, 250, 240), 0.62, Color(1, 0.98, 0.94)),   # wash color, wash strength, halo color
-    "dark": ((14, 12, 22), 0.50, Color(0.06, 0.05, 0.09)),
+    "light": ((255, 250, 240), 0.70, Color(1, 0.98, 0.94)),   # wash color, wash strength, (unused)
+    "dark": ((14, 12, 22), 0.56, Color(0.06, 0.05, 0.09)),
 }
 _wash_cache = {}
 
@@ -288,20 +288,6 @@ def _draw_text(c, layout):
         grow_x, grow_y = w * 0.10, h * 0.35
         c.drawImage(_wash(layout["theme"], w + 2 * grow_x, h + 2 * grow_y), x - grow_x, y - grow_y,
                     w + 2 * grow_x, h + 2 * grow_y, mask="auto")
-        halo = glow[2]
-        c.saveState()
-        c.setLineJoin(1)
-        for width, alpha in ((size * 0.42, 0.18), (size * 0.24, 0.35)):
-            c.setStrokeColor(Color(halo.red, halo.green, halo.blue, alpha=alpha))
-            c.setLineWidth(width)
-            for line, ly in lines:
-                t = c.beginText()
-                t.setTextRenderMode(1)
-                t.setFont(T.STORY_FONT, size)
-                t.setTextOrigin(x + w / 2 - c.stringWidth(line, T.STORY_FONT, size) / 2, ly)
-                t.textLine(line)
-                c.drawText(t)
-        c.restoreState()
     c.setFillColor(ink)
     c.setFont(T.STORY_FONT, size)
     for line, ly in lines:
@@ -335,13 +321,23 @@ def _story_page_v2(c, art_png, layout, bleed=0):
     _draw_text(c, layout)  # the only text on the page (no page numbers: they could land on a face)
 
 
-def copyright_lines(title, name, book_id, made_at):
+def full_title(story, name):
+    """"Simcha and the Beanstalk" / "Little Red Riding Hood, featuring Meira"."""
+    import stories
+    title = stories.book_title(story, name)
+    return title if story.get("title_with_name") else f"{title}, featuring {name}"
+
+
+def copyright_lines(story, name, book_id, made_at):
+    import stories
     import time as _t
     year = _t.strftime("%Y", _t.gmtime(made_at))
     month = _t.strftime("%B %Y", _t.gmtime(made_at))
+    title = stories.book_title(story, name)
+    sub = "" if story.get("title_with_name") else f"featuring {name}"
     return [
-        ("title", f"{title}"),
-        ("italic", f"starring {name}"),
+        ("title", title),
+        ("italic", sub),
         ("gap", ""),
         ("body", f"Text and illustrations copyright \u00a9 {year} {PUBLISHER}."),
         ("body", "All rights reserved. No part of this book may be reproduced"),
@@ -358,13 +354,13 @@ def copyright_lines(title, name, book_id, made_at):
     ]
 
 
-def _copyright_page(c, title, name, book_id, made_at, bleed=0):
+def _copyright_page(c, story, name, book_id, made_at, bleed=0):
     """The inside page: copyright notice and publisher. The story starts on the next page."""
     _fill(c, PAPER, bleed)
     c.setFillColor(INK)
     fonts = {"title": (STORY_FONT, 15, 20), "italic": ("Times-Italic", 12, 18), "body": (BODY_FONT, 9, 12.5),
              "bold": (BODY_BOLD, 9, 12.5), "small": (BODY_FONT, 7.5, 11), "gap": (BODY_FONT, 9, 9)}
-    lines = copyright_lines(title, name, book_id, made_at)
+    lines = copyright_lines(story, name, book_id, made_at)
     total = sum(fonts[k][2] for k, _ in lines)
     y = 72 + total  # set low on the page, like a real copyright page
     for kind, text in lines:
@@ -375,42 +371,178 @@ def _copyright_page(c, title, name, book_id, made_at, bleed=0):
             c.drawCentredString(W / 2, y, text)
 
 
-def _the_end_page(c, name, bleed=0):
+def _the_end_page(c, story, name, bleed=0):
     _fill(c, PAPER, bleed)
     c.setFillColor(INK)
     c.setFont(STORY_FONT, 44)
     c.drawCentredString(W / 2, H / 2 + 10, "The End")
     c.setFont("Times-Italic", 16)
-    c.drawCentredString(W / 2, H / 2 - 22, f"starring {name}")
+    if not story.get("title_with_name"):
+        c.drawCentredString(W / 2, H / 2 - 22, f"featuring {name}")
 
 
-def cover_geometry(title):
-    """Where everything on the front cover goes (shared by the PDF, the print cover and the web preview).
-    Everything stays at least 0.5 inch inside the trim."""
-    lines = simpleSplit(title, STORY_FONT, 34, W - 80)
-    title_bottom = H - 66 - 40 * (len(lines) - 1)
-    by = 74
-    box_h = min(440, title_bottom - 18 - by - 12)
-    box_w = box_h * 2 / 3
-    return {"lines": lines, "box": [(W - box_w) / 2, by, box_w, box_h], "starring_y": 44}
+# ---- The front cover --------------------------------------------------------------------------------
+# The book's own most exciting page (Jack climbing the beanstalk, Red Riding Hood with the wolf), full
+# bleed, with a big playful title in the band that picture leaves empty for words, so it never covers a
+# face. Jack's book is named after the child ("SIMCHA and the Beanstalk"); Red Riding Hood keeps her
+# title with a "FEATURING MEIRA" ribbon. cover_spec() is shared by the PDF, the print cover and the web.
+FONT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonts")
+TITLE_FONT = STORY_FONT
+try:
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    pdfmetrics.registerFont(TTFont("Fredoka-Bold", os.path.join(FONT_DIR, "Fredoka-Bold.ttf")))
+    TITLE_FONT = "Fredoka-Bold"
+except Exception:  # noqa: BLE001 - the cover still works in Times
+    pass
+
+SUN, CREAM, NAVY = "#ffc845", "#fff7e6", "#1b1f4a"
+COVER_MARGIN = 42.0  # inside the 0.5 inch print safety margin
 
 
-def _front_cover(c, title, name, hero_png, story_id, background=True):
-    if background:
-        _fill(c, COVER_COLORS.get(story_id, INK))
-    cream = Color(1, 0.96, 0.86)
-    g = cover_geometry(title)
-    c.setFillColor(cream)
-    c.setFont(STORY_FONT, 34)
-    for i, line in enumerate(g["lines"]):
-        c.drawCentredString(W / 2, H - 66 - 40 * i, line)
-    # the hero, framed, between the title and the name: no text ever sits on the art
-    bx, by, bw, bh = g["box"]
-    c.roundRect(bx - 6, by - 6, bw + 12, bh + 12, 10, stroke=0, fill=1)
-    c.drawImage(_jpeg(hero_png), bx, by, bw, bh)
-    c.setFillColor(cream)
-    c.setFont("Times-Italic", 20)
-    c.drawCentredString(W / 2, g["starring_y"], f"starring {name}")
+def _fit(text, font, size, width):
+    while size > 14 and pdfmetrics.stringWidth(text, font, size) > width:
+        size -= 1
+    return size
+
+
+def cover_spec(story: dict, name: str) -> dict:
+    import stories
+    n = stories.SHOWCASE.get(story["id"])
+    zone = story["pages"][n - 1].get("zone", "top") if n else "top"
+    where = "bottom" if zone.startswith("bottom") else "top"
+    width = W - 2 * COVER_MARGIN
+    lines = []
+    if story.get("title_with_name"):
+        rest = story["title_with_name"].replace("{name}", "").strip()
+        lines.append({"text": name.upper(), "size": _fit(name.upper(), TITLE_FONT, 66, width), "color": SUN})
+        lines.append({"text": rest, "size": _fit(rest, TITLE_FONT, 36, width), "color": CREAM})
+        ribbon = None
+    else:
+        for part in simpleSplit(story["title"], TITLE_FONT, 50, width):
+            lines.append({"text": part, "size": _fit(part, TITLE_FONT, 50, width), "color": CREAM})
+        rt = f"FEATURING {name.upper()}"
+        rsize = _fit(rt, TITLE_FONT, 16, width - 40)
+        ribbon = {"text": rt, "size": rsize, "h": rsize * 2.1,
+                  "w": pdfmetrics.stringWidth(rt, TITLE_FONT, rsize) + 2.2 * (len(rt) - 1) + rsize * 2.4}
+    block = sum(l["size"] * 1.02 for l in lines) + (ribbon["h"] + 12 if ribbon else 0)
+    top = H - COVER_MARGIN if where == "top" else COVER_MARGIN + block
+    y = top
+    for l in lines:
+        y -= l["size"] * 1.02
+        l["y"] = y + l["size"] * 0.18          # baseline
+    if ribbon:
+        y -= 12 + ribbon["h"]
+        ribbon["y"] = y
+        ribbon["x"] = (W - ribbon["w"]) / 2
+    shade = [H - block - COVER_MARGIN - 70, H] if where == "top" else [0, block + COVER_MARGIN + 70]
+    return {"page": n, "where": where, "lines": lines, "ribbon": ribbon, "shade": shade, "font": TITLE_FONT}
+
+
+_shade_cache = {}
+
+
+def _shade(where):
+    """A vertical gradient (RGBA PNG): dark at the cover's edge, fading out, so the title pops off the art."""
+    if where not in _shade_cache:
+        img = Image.new("RGBA", (4, 256), (16, 18, 48, 0))
+        px = img.load()
+        for yy in range(256):
+            t = yy / 255 if where == "bottom" else 1 - yy / 255   # 1 at the outer edge
+            a = int(150 * (t ** 1.6))
+            for xx in range(4):
+                px[xx, yy] = (16, 18, 48, a)
+        _shade_cache[where] = ImageReader(img)
+    return _shade_cache[where]
+
+
+def _outlined(c, text, x_center, y, font, size, fill, char_space=0.0):
+    """Big storybook title text: soft shadow, thick dark outline, bright fill."""
+    w = pdfmetrics.stringWidth(text, font, size) + char_space * (len(text) - 1)
+    x = x_center - w / 2
+
+    def put(mode, dx=0, dy=0):
+        # each pass in its own graphics state: a PDF's text render mode otherwise carries over to the next text
+        c.saveState()
+        t = c.beginText()
+        t.setTextRenderMode(mode)
+        t.setFont(font, size)
+        t.setCharSpace(char_space)
+        t.setTextOrigin(x + dx, y + dy)
+        t.textOut(text)
+        c.drawText(t)
+        c.restoreState()
+
+    c.saveState()
+    c.setLineJoin(1)
+    c.setFillColor(Color(0.04, 0.05, 0.15, alpha=0.45))
+    c.setStrokeColor(Color(0.04, 0.05, 0.15, alpha=0.45))
+    c.setLineWidth(size * 0.16)
+    put(2, size * 0.04, -size * 0.07)       # shadow
+    c.setStrokeColor(_hex(NAVY))
+    c.setLineWidth(size * 0.16)
+    put(1)                                  # outline
+    c.setFillColor(_hex(fill))
+    put(0)                                  # fill
+    c.restoreState()
+
+
+def _hex(h):
+    h = h.lstrip("#")
+    return Color(int(h[0:2], 16) / 255, int(h[2:4], 16) / 255, int(h[4:6], 16) / 255)
+
+
+def _front_cover(c, story, name, hero_png, cover_art=None, background=True, bleed=(0, 0, 0, 0)):
+    """bleed = (left, bottom, right, top): how far the art runs past the trim (print cover: into the wrap)."""
+    spec = cover_spec(story, name)
+    bl, bb, br, bt = bleed
+    if cover_art:
+        aw, ah = W + bl + br, H + bb + bt
+        w, h = aw, aw * 1.5
+        if h < ah:
+            h, w = ah, ah / 1.5
+        cx, cy = -bl + aw / 2, -bb + ah / 2
+        c.saveState()
+        p = c.beginPath()
+        p.rect(-bl, -bb, aw, ah)
+        c.clipPath(p, stroke=0, fill=0)
+        c.drawImage(_jpeg(cover_art), cx - w / 2, cy - h / 2, w, h)
+        c.restoreState()
+    else:  # no finished page to use: the character, framed, on the story's color
+        c.setFillColor(COVER_COLORS.get(story["id"], INK))
+        c.rect(-bl, -bb, W + bl + br, H + bb + bt, stroke=0, fill=1)
+        bh = 360
+        bw = bh * 2 / 3
+        by = 70 if spec["where"] == "top" else H - 70 - bh
+        c.setFillColor(_hex(CREAM))
+        c.roundRect((W - bw) / 2 - 6, by - 6, bw + 12, bh + 12, 10, stroke=0, fill=1)
+        c.drawImage(_jpeg(hero_png), (W - bw) / 2, by, bw, bh)
+    y0, y1 = spec["shade"]
+    if spec["where"] == "top":
+        y1 += bt
+    else:
+        y0 -= bb
+    c.drawImage(_shade(spec["where"]), -bl, y0, W + bl + br, y1 - y0, mask="auto")
+    for l in spec["lines"]:
+        _outlined(c, l["text"], W / 2, l["y"], spec["font"], l["size"], l["color"], char_space=l["size"] * 0.01)
+    r = spec["ribbon"]
+    if r:
+        c.saveState()
+        c.setFillColor(Color(0.04, 0.05, 0.15, alpha=0.35))
+        c.roundRect(r["x"] + 2, r["y"] - 3, r["w"], r["h"], r["h"] / 2, stroke=0, fill=1)
+        c.setFillColor(_hex(SUN))
+        c.setStrokeColor(_hex(NAVY))
+        c.setLineWidth(2.2)
+        c.roundRect(r["x"], r["y"], r["w"], r["h"], r["h"] / 2, stroke=1, fill=1)
+        c.setFillColor(_hex(NAVY))
+        t = c.beginText()
+        t.setFont(spec["font"], r["size"])
+        t.setCharSpace(2.2)
+        tw = pdfmetrics.stringWidth(r["text"], spec["font"], r["size"]) + 2.2 * (len(r["text"]) - 1)
+        t.setTextOrigin(W / 2 - tw / 2, r["y"] + r["h"] / 2 - r["size"] * 0.36)
+        t.textOut(r["text"])
+        c.drawText(t)
+        c.restoreState()
 
 
 def _about_me_v2(c, name, details, hero_png, photo, background=True):
@@ -460,6 +592,15 @@ def _about_me_v2(c, name, details, hero_png, photo, background=True):
             y -= 19
 
 
+def _cover_art(story, pages):
+    """The finished picture of the story's showcase page, used full-bleed on the front cover."""
+    import stories
+    n = stories.SHOWCASE.get(story["id"])
+    if pages and n and n <= len(pages):
+        return pages[n - 1][0]
+    return None
+
+
 def build_story_pdf(story: dict, name: str, details: list, hero_png: bytes, photo: bytes, pages: list,
                     book_id: str = "00000000", made_at: int = 0) -> bytes:
     """The book to read on screen and download: front cover, copyright page, the 20 story pages,
@@ -467,13 +608,13 @@ def build_story_pdf(story: dict, name: str, details: list, hero_png: bytes, phot
     with _jpeg_folder():
         buf = io.BytesIO()
         c = canvas.Canvas(buf, pagesize=(W, H))
-        c.setTitle(f"{story['title']}, starring {name}")
+        c.setTitle(full_title(story, name))
         c.setAuthor(PUBLISHER)
-        _front_cover(c, story["title"], name, hero_png, story["id"]); c.showPage()
-        _copyright_page(c, story["title"], name, book_id, made_at); c.showPage()
+        _front_cover(c, story, name, hero_png, _cover_art(story, pages)); c.showPage()
+        _copyright_page(c, story, name, book_id, made_at); c.showPage()
         for art, layout in pages:
             _story_page_v2(c, art, layout); c.showPage()
-        _the_end_page(c, name); c.showPage()
+        _the_end_page(c, story, name); c.showPage()
         _about_me_v2(c, name, details, hero_png, photo); c.showPage()
         c.save()
         return buf.getvalue()
@@ -492,7 +633,7 @@ def build_print_interior(story, name, pages, book_id, made_at) -> bytes:
     with _jpeg_folder():
         buf = io.BytesIO()
         c = canvas.Canvas(buf, pagesize=(W + 2 * BLEED, H + 2 * BLEED))
-        c.setTitle(f"{story['title']}, starring {name} (interior)")
+        c.setTitle(full_title(story, name) + " (interior)")
         count = 0
 
         def page(draw):
@@ -504,17 +645,17 @@ def build_print_interior(story, name, pages, book_id, made_at) -> bytes:
             c.showPage()
             count += 1
 
-        page(lambda: _copyright_page(c, story["title"], name, book_id, made_at, BLEED))
+        page(lambda: _copyright_page(c, story, name, book_id, made_at, BLEED))
         for art, layout in pages:
             page(lambda art=art, layout=layout: _story_page_v2(c, art, layout, BLEED))
-        page(lambda: _the_end_page(c, name, BLEED))
+        page(lambda: _the_end_page(c, story, name, BLEED))
         while count < PRINT_PAGE_MIN or count % 2:
             page(lambda: _fill(c, PAPER, BLEED))  # endpaper
         c.save()
         return buf.getvalue(), count
 
 
-def build_print_cover(story, name, details, hero_png, photo, width, height) -> bytes:
+def build_print_cover(story, name, details, hero_png, photo, width, height, pages=None) -> bytes:
     """One-piece cover: back cover (About Me) | spine | front cover, at the exact size the printer asks
     for (width x height in points, including bleed and the hardcover board wrap)."""
     wrap = (height - H) / 2                     # bleed + board wrap, equal on every outer edge
@@ -523,7 +664,7 @@ def build_print_cover(story, name, details, hero_png, photo, width, height) -> b
     with _jpeg_folder():
         buf = io.BytesIO()
         c = canvas.Canvas(buf, pagesize=(width, height))
-        c.setTitle(f"{story['title']}, starring {name} (cover)")
+        c.setTitle(full_title(story, name) + " (cover)")
         c.setFillColor(color)
         c.rect(0, 0, width, height, stroke=0, fill=1)
         c.saveState()                           # back cover, left
@@ -532,7 +673,7 @@ def build_print_cover(story, name, details, hero_png, photo, width, height) -> b
         c.restoreState()
         c.saveState()                           # front cover, right
         c.translate(wrap + W + spine, wrap)
-        _front_cover(c, story["title"], name, hero_png, story["id"], background=False)
+        _front_cover(c, story, name, hero_png, _cover_art(story, pages), background=False, bleed=(0, wrap, wrap, wrap))
         c.restoreState()
         c.showPage()
         c.save()

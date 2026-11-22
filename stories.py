@@ -49,7 +49,9 @@ STORIES = {}
 STORIES["jack"] = {
     "id": "jack",
     "title": "Jack and the Beanstalk",
+    "title_with_name": "{name} and the Beanstalk",
     "hero_name": "Jack",
+    "default_pronoun": "he",
     "hero_outfit": "a loose cream-colored linen shirt with rolled sleeves, a brown wool vest, dark brown knee-length trousers, and worn brown leather boots",
     "standin": "a friendly, slim young person with short brown hair (age left neutral so any real person can be swapped in)",
     # The character bible: everyone except the hero. Each gets one reference image.
@@ -75,66 +77,66 @@ STORIES["jack"] = {
         ],
     },
     "pages": [
-        {"text": "Once upon a time, Jack and his mother lived in a tiny cottage. They were so poor that all they had left was their cow, Milky-White.",
+        {"text": "Once upon a time, {name} and {his} mother lived in a tiny cottage. They were so poor that all they had left was their cow, Milky-White.",
          "zone": "bottom", "cast": ["mother", "cow"],
-         "scene": "Outside a small, run-down thatched cottage on a sunny morning. Jack stands by the gate with his mother, both looking at Milky-White, who grazes in front of them. Jack and his mother face the viewer in three-quarter view."},
-        {"text": "\"We have no money left,\" said his mother sadly. \"Take Milky-White to market, and sell her for a good price.\"",
+         "scene": "Outside a small, run-down thatched cottage on a sunny morning. Jack, a slim child of about nine, stands by the gate with his mother; he is much shorter than her, the top of his head only reaching her shoulder, both looking at Milky-White, who grazes in front of them. Jack and his mother face the viewer in three-quarter view."},
+        {"text": "\"We have no money left,\" said {his} mother sadly. \"Take Milky-White to market, and sell her for a good price.\"",
          "zone": "top", "cast": ["mother", "cow"],
          "scene": "Inside the bare cottage kitchen: an empty cupboard, a cold hearth, one wooden table. Jack's mother, sad and worried, hands Jack a rope tied to Milky-White, who stands at the open door. Jack looks up at her, determined."},
-        {"text": "So Jack set off down the long road, leading Milky-White behind him.",
+        {"text": "So {name} set off down the long road, leading Milky-White behind {him}.",
          "zone": "top", "cast": ["cow"],
          "scene": "A winding dirt road through green hills and wildflowers. Jack walks toward the viewer, cheerful, holding the rope; Milky-White follows just behind him."},
-        {"text": "Before long he met a strange old man. \"Good morning, Jack,\" said the old man. \"Where are you off to?\"",
+        {"text": "Before long, {name} met a strange old man. \"Good morning, {name},\" said the old man. \"Where are you off to?\"",
          "zone": "top", "cast": ["cow", "old_man"],
          "scene": "The same road beside an old stone wall. The old man steps out from behind a tree and tips his head at Jack. Jack, holding Milky-White's rope, turns toward him, curious. Jack in the foreground, larger than the old man."},
         {"text": "The old man opened his hand. \"Five magic beans,\" he whispered, \"for your cow. Plant them tonight, and by morning they will reach the sky.\"",
          "zone": "top", "cast": ["cow", "old_man"],
          "scene": "Close up of Jack and the old man on the road. The old man holds out his open palm toward Jack. In his palm are exactly five magic beans, no more and no fewer, spaced apart so each is visible: plump bean-shaped seeds (clearly beans, with a small seam, not candy or gems), each a different shimmering jewel color (emerald green, sapphire blue, ruby red, amethyst purple and gold), covered in tiny golden speckles and giving off a soft magical glow and a few sparkles. Jack leans in, amazed, the glow lighting his face. Milky-White's head is beside Jack."},
-        {"text": "Jack could not resist. He traded Milky-White for the beans and ran all the way home.",
+        {"text": "{name} could not resist. {He} traded Milky-White for the beans and ran all the way home.",
          "zone": "top", "cast": ["cow", "old_man"],
          "scene": "On the road: Jack runs toward the viewer, grinning, holding up his open hand with the five glowing, jewel-colored magic beans in it. Behind him, smaller, the old man leads Milky-White away down the road."},
-        {"text": "\"Five beans? For our cow?\" sighed his mother. \"They're only ordinary beans, Jack.\" And she tossed them out of the window.",
+        {"text": "\"Five beans? For our cow?\" sighed {his} mother. \"They're only ordinary beans, {name}.\" And she tossed them out of the window.",
          "zone": "bottom", "cast": ["mother"],
-         "scene": "Inside the cottage kitchen at dusk. Jack's mother, tired and unimpressed but not angry, casually tosses the five beans over her shoulder out of the open window with a careless flick of her wrist, rolling her eyes with a small sigh, as if throwing away ordinary old beans. The five beans glow faintly in jewel colors as they fly out into the orange evening sky. Jack stands next to her, shocked, reaching toward the window. Warm candlelight inside."},
-        {"text": "Jack was sent to bed without any supper. He looked out at the moon and wondered if he had been very foolish.",
+         "scene": "Inside the cottage kitchen at dusk. Jack's mother, tired and unimpressed but not angry, casually tosses the five beans over her shoulder out of the open window with a careless flick of her wrist, rolling her eyes with a small sigh, as if throwing away ordinary old beans. The five beans glow faintly in jewel colors as they fly out into the orange evening sky. Jack, a slim child much shorter than his mother (his head reaches her shoulder), stands next to her, shocked, reaching toward the window. Warm candlelight inside."},
+        {"text": "{name} was sent to bed without any supper. Looking out at the moon, {name} wondered: had that been a very foolish trade?",
          "zone": "top", "cast": [],
          "scene": "Jack's small attic bedroom at night. Jack sits on the edge of a simple wooden bed, chin in his hands, gloomy, lit by soft blue moonlight from a small window and a candle beside him."},
         {"text": "But in the morning, where the beans had landed, a giant beanstalk had grown, up, up, up, into the clouds.",
          "zone": "middle", "cast": [],
-         "scene": "Morning outside the cottage. Jack stands in the garden in the lower part of the image, looking up in wonder with his face toward the viewer. Beside him a gigantic twisting green beanstalk with huge leaves rises straight up, past a band of soft white cloud across the middle of the image, and continues up to the top."},
-        {"text": "Jack began to climb. He climbed and he climbed, higher than the birds, until he reached the sky.",
+         "scene": "Morning outside the cottage. Jack stands in the garden in the lower part of the image, his head tilted back, looking UP at the beanstalk in wonder, seen in three-quarter view so his face is still visible. Beside him a gigantic twisting green beanstalk with huge leaves rises straight up, past a band of soft white cloud across the middle of the image, and continues up to the top."},
+        {"text": "{name} began to climb, up and up, higher than the birds, until {he} reached the sky.",
          "zone": "bottom", "cast": [],
          "scene": "Jack climbing the beanstalk high in the sky, seen from slightly above, his face turned up toward the viewer, smiling and determined. Huge leaves around him, small birds flying far below, and his tiny cottage and fields far, far below at the bottom of the image under a thin layer of mist."},
         {"text": "At the top was a road made of clouds, and at the end of the road stood an enormous castle.",
          "zone": "top", "cast": [],
-         "scene": "Above the clouds: Jack steps off the top of the beanstalk onto a road of white clouds, in the foreground, seen in three-quarter view, gazing at an enormous grey stone castle in the distance."},
-        {"text": "A giant woman opened the door. \"Hurry, little one,\" she whispered. \"My husband eats boys for breakfast! Quick, hide in this big pot!\"",
+         "scene": "Above the clouds: Jack steps off the top of the beanstalk onto a road of white clouds, in the foreground, seen from the side, his face in profile turned toward the castle (a side view of his face is visible), gazing at an enormous grey stone castle in the distance."},
+        {"text": "A giant woman opened the door. \"Hurry, little one,\" she whispered. \"My husband eats children for breakfast! Quick, hide in this big pot!\"",
          "zone": "top", "cast": ["giants_wife"],
          "scene": "At the enormous castle door, which is many times taller than Jack. The giant's wife bends down kindly toward Jack, a finger to her lips. Jack looks up at her, startled. Both faces are visible."},
-        {"text": "BOOM! BOOM! BOOM! In stomped the giant. \"Fee-fi-fo-fum!\" he roared. \"I smell a boy, I'm sure of one!\"",
+        {"text": "BOOM! BOOM! BOOM! In stomped the giant. \"Fee-fi-fo-fum!\" he roared. \"I smell a {child}, I'm sure of one!\"",
          "zone": "top", "cast": ["giant", "giants_wife"],
          "scene": "The giant's huge kitchen. The giant stomps in through a doorway on the right, sniffing the air. In the foreground on the left, Jack is hidden INSIDE an enormous copper cooking pot on the floor: only his head, from the eyes up to his hair plus his hands gripping the rim, peeks over the edge. His eyes and upper face are clearly visible, wide with fear; the rest of him is out of sight inside the pot. The giant has not seen him. The giant's wife stands at the stove looking nervous."},
-        {"text": "The giant sniffed all around, but he never found Jack. After dinner, he counted his gold and fell fast asleep. Jack crept out, took a bag of gold, and hurried home.",
+        {"text": "The giant sniffed all around, but he never found {name}. After dinner, he counted his gold and fell fast asleep. {name} crept out, took a bag of gold, and hurried home.",
          "zone": "top", "cast": ["giant"],
          "scene": "The giant snores in a huge wooden chair, slumped on the right, with gold coins spilled on the table. In the foreground Jack tiptoes away hugging a bag of gold coins, looking back at the viewer with a grin."},
-        {"text": "For a while, Jack and his mother had all they needed. But one day the bag of gold was empty, so Jack climbed the beanstalk once more.",
+        {"text": "For a while, {name} and {his} mother had all they needed. But one day the bag of gold was empty, so {name} climbed the beanstalk once more.",
          "zone": "top", "cast": ["mother"],
          "scene": "Inside the cottage kitchen in the evening. Jack and his mother sit at the wooden table looking at an empty, flat money bag turned inside out, with not a single coin left; the mother holds it up, shrugging sadly. Jack faces the viewer, worried. Through the open window behind them, the giant beanstalk rises into the sky. Warm candlelight. No giant in this picture."},
-        {"text": "Up in the castle, the giant had a hen that laid a golden egg each time he said, \"Lay!\" When the giant fell asleep, Jack tucked the hen under his arm and tiptoed away.",
-         "zone": "top", "cast": ["giant", "hen"],
-         "scene": "The giant's enormous kitchen. On the huge wooden table in the foreground sits the hen on a straw nest, having just laid a shining golden egg, with a little pile of golden eggs beside the nest. Jack stands on the table in the foreground, tiptoeing, lifting the hen and tucking her under one arm, looking at the viewer with a sly, excited face. FAR away in the background, small, the giant is slumped fast asleep in his chair by the fireplace, eyes closed, snoring. The giant is far from Jack and cannot see him."},
-        {"text": "Jack grabbed a golden harp too, but it sang out, \"Master! Master!\" The giant woke with a roar and thundered after Jack.",
+        {"text": "Up in the castle, the giant had a hen that laid a golden egg whenever he said, \"Lay!\" and a harp that sang all by itself. When he fell asleep, {name} took them both.",
+         "zone": "top", "cast": ["giant", "hen", "harp"],
+         "scene": "The giant's enormous kitchen. On the huge wooden table in the foreground sits the hen on a straw nest, having just laid a shining golden egg, with a little pile of golden eggs beside the nest. Jack stands on the table in the foreground, tiptoeing, with the hen tucked under one arm and the golden harp held in the other arm, looking at the viewer with a sly, excited face. FAR away in the background, small, the giant is slumped fast asleep in his chair by the fireplace, eyes closed, snoring. The giant is far from Jack and cannot see him."},
+        {"text": "But as {name} ran, the harp sang out, \"Master! Master!\" The giant woke with a roar and thundered after {him}.",
          "zone": "top", "cast": ["giant", "harp", "hen"],
          "scene": "On the cloud road: Jack sprints toward the viewer with the harp in one arm and the hen tucked under the other, with an excited, frightened face. Far behind him, the giant chases, arms outstretched, smaller in the distance. The top of the beanstalk is in front of Jack."},
-        {"text": "\"Mother! Mother! Bring the axe!\" shouted Jack, sliding down the beanstalk with the hen and the harp.",
+        {"text": "\"Mother! Mother! Bring the axe!\" shouted {name}, sliding down the beanstalk with the hen and the harp.",
          "zone": "top", "cast": ["mother", "harp", "hen"],
          "scene": "Lower part of the beanstalk near the ground. Jack slides down a thick stem toward the viewer, shouting, with the harp under one arm and the hen riding on his shoulder, flapping. Below, his mother runs out of the cottage holding a woodcutter's axe. Jack's face clearly visible."},
-        {"text": "Jack chopped and chopped. Down came the beanstalk with a mighty CRASH, and the giant was never seen again.",
+        {"text": "{name} chopped and chopped. Down came the beanstalk with a mighty CRASH, and the giant was never seen again.",
          "zone": "top", "cast": ["mother"],
          "scene": "In the garden: Jack has just swung the axe, the beanstalk is toppling sideways with leaves flying, and a big cloud of dust rises. His mother stands beside him, hands on her cheeks. Jack faces the viewer in three-quarter view, triumphant. No giant is shown."},
-        {"text": "With the hen's golden eggs, Jack bought back Milky-White. And Jack, his mother, and Milky-White lived happily ever after.",
+        {"text": "With the hen's golden eggs, {name} bought back Milky-White. And {name}, {his} mother, and Milky-White lived happily ever after.",
          "zone": "bottom", "cast": ["mother", "cow", "hen", "harp"],
-         "scene": "A sunny garden in front of the now-repaired cottage, with flowers. Jack hugs Milky-White, smiling at the viewer. His mother laughs beside them, holding a basket of golden eggs, the hen at her feet, and the harp sits on a bench nearby."},
+         "scene": "A sunny garden in front of the now-repaired cottage, with flowers. Jack, a slim child much shorter than his mother (his head reaches her shoulder), hugs Milky-White, smiling at the viewer. His mother laughs beside them, holding a basket of golden eggs, the hen at her feet, and the harp sits on a bench nearby."},
     ],
 }
 
@@ -142,6 +144,7 @@ STORIES["red"] = {
     "id": "red",
     "title": "Little Red Riding Hood",
     "hero_name": "Little Red Riding Hood",
+    "default_pronoun": "they",
     "hero_outfit": ("a bright red hooded cape tied at the neck, with the hood down so the face and hair are fully visible. "
                     "Under the cape: if the child is a girl, a simple knee-length storybook dress (a cream blouse with "
                     "puffed sleeves under a laced dark-red pinafore skirt), white stockings and brown leather Mary Jane "
@@ -156,7 +159,7 @@ STORIES["red"] = {
         "basket": "The basket: a woven wicker basket with a handle, covered by a red-and-white checked cloth, with a loaf of bread and a jar of honey peeking out. Just the basket on its own: no person, no hands, no character holding it.",
     },
     "pages": [
-        {"text": "Once upon a time there was a child who always wore a bright red hooded cape, so everyone called them Little Red Riding Hood.",
+        {"text": "Once upon a time there was a child who always wore a bright red hooded cape, so everyone called {him} Little Red Riding Hood.",
          "zone": "bottom", "cast": [],
          "scene": "A pretty village street with timbered houses and flower boxes on a sunny morning. The hero stands in the middle of the street in the red cape, smiling and facing the viewer."},
         {"text": "One morning, Mother packed a basket. \"Grandmother is sick,\" she said. \"Take her this bread and honey. And stay on the path!\"",
@@ -189,7 +192,7 @@ STORIES["red"] = {
         {"text": "Then the wolf put on Grandmother's nightcap and glasses, climbed into her bed, and waited.",
          "zone": "top", "cast": ["wolf"],
          "scene": "Grandmother's bedroom. The wolf lies in the bed with the blanket pulled up, wearing Grandmother's frilly nightcap and round glasses, grinning. The hero does not appear on this page."},
-        {"text": "Soon Little Red Riding Hood arrived with the basket and the flowers. The door was standing open, so in they went.",
+        {"text": "Soon Little Red Riding Hood arrived with the basket and the flowers. The door was standing open, so in {he} went.",
          "zone": "top", "cast": ["basket"],
          "scene": "Outside the cottage with the red door, which stands slightly open. The hero stands on the doorstep holding the basket and a bunch of flowers, looking at the open door, puzzled."},
         {"text": "\"Oh, Grandmother, what big ears you have!\" \"All the better to hear you with, my dear.\"",
@@ -367,12 +370,16 @@ EXPRESSIONS = {
 # What a page MUST show about the hero, where the story depends on it. Told to the drawing and checked after.
 MUST = {
     "jack": {
+        7: "Jack is SLIM, exactly the build of image 2 (not chubby, no round belly or full cheeks), and clearly "
+           "shorter than his mother.",
+        9: "Jack is looking UP at the beanstalk, head tilted back, NOT looking at the viewer.",
+        11: "Jack is looking toward the castle in the distance, NOT at the viewer (a side view of his face is fine).",
         13: "Jack is HIDDEN inside the big copper pot: only his eyes, the top of his head and his fingers on the rim "
             "show above its edge. His body is NOT visible and he is NOT standing up. The giant is not looking at him.",
         14: "The giant is fast asleep with his eyes closed while Jack tiptoes away.",
         15: "This is at home in the cottage with Jack's mother. There is NO giant anywhere in the picture.",
-        16: "Jack is holding the hen, and a golden egg the hen has laid is clearly visible. The giant is far away in "
-            "the background, fast asleep with his eyes closed, and is NOT near Jack.",
+        16: "Jack has the hen under one arm AND the golden harp in the other arm, and a golden egg the hen has laid is "
+            "clearly visible. The giant is far away in the background, fast asleep with his eyes closed, NOT near Jack.",
         17: "Jack is carrying both the hen and the golden harp.",
         18: "Jack has both the hen and the golden harp with him as he slides down.",
     },
@@ -387,6 +394,38 @@ def must(s: dict, page: dict):
 SHOWCASE = {"jack": 10, "red": 5}
 # Three more pages shown as samples on the home page.
 SAMPLES = {"jack": (5, 13, 17), "red": (4, 15, 18)}
+
+
+# The child is the hero: Jack's story is told with the child's own name ("Simcha climbed the beanstalk"),
+# and both stories use the child's pronouns. Little Red Riding Hood keeps her title and nickname.
+PRONOUNS = {
+    "he": {"he": "he", "He": "He", "his": "his", "His": "His", "him": "him", "child": "boy"},
+    "she": {"he": "she", "He": "She", "his": "her", "His": "Her", "him": "her", "child": "girl"},
+    "they": {"he": "they", "He": "They", "his": "their", "His": "Their", "him": "them", "child": "child"},
+}
+
+
+def page_text(s: dict, page: dict, name: str = None, pronoun: str = None) -> str:
+    """A page's words for this child. Without a name (the pre-drawn scenes) the story's own hero is used."""
+    words = PRONOUNS.get(pronoun or s.get("default_pronoun", "they"), PRONOUNS["they"])
+    text = page["text"].replace("{name}", name or s["hero_name"])
+    for token, word in words.items():
+        text = text.replace("{" + token + "}", word)
+    return text
+
+
+def book_title(s: dict, name: str = None) -> str:
+    """Jack's book is named after the child ("Simcha and the Beanstalk"); Red Riding Hood keeps her title."""
+    if s.get("title_with_name") and name:
+        return s["title_with_name"].replace("{name}", name)
+    return s["title"]
+
+
+def book_subtitle(s: dict, name: str = None) -> str:
+    """The line under the title on the cover: "FEATURING MEIRA" (none for Jack: the name is in the title)."""
+    if s.get("title_with_name") or not name:
+        return ""
+    return f"FEATURING {name.upper()}"
 
 
 def expression(s: dict, page: dict) -> str:
@@ -419,6 +458,11 @@ def swap_prompt(s: dict, page: dict, head_hidden: bool = False) -> str:
         "front-lit and recognizable. Copy the face's SHAPES and FEATURES, drawn in the same cartoon style as image 2.\n\n"
         "BODY: exactly image 2's build, weight and proportions. Never make the hero chubbier, rounder, heavier, "
         "thinner, taller, shorter, older or younger than image 2, in the face or the body.\n\n"
+        "SIZE: the hero is a CHILD. Keep the hero exactly as tall as in image 1. Next to an adult (a parent, a "
+        "grandmother, an old man), the hero is clearly shorter: the top of the hero's head is at about the adult's "
+        "shoulder, never level with their face.\n\n"
+        "GAZE: keep the hero looking in the same direction as in image 1 (at another character, at something in the "
+        "scene, or at the viewer); don't turn the head toward the viewer unless the hero faces the viewer in image 1.\n\n"
         f"EXPRESSION ON THIS PAGE: {expression(s, page)}, to fit this moment in the story. Image 3 shows what the face "
         "looks like, not which expression to use. Show the expression only with the mouth, eyebrows and eyelids, "
         "the way an animator draws the same character happy, worried or surprised: the character must still be "

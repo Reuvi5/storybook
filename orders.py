@@ -72,7 +72,7 @@ def prepare_print_files(storage, user_id, b, force=False) -> dict:
     width, height = printing.cover_dimensions(page_count)
     cover, geo = pdf.build_print_cover(s, name, generator.labeled_details(b["details"]),
                                        storage.get_blob(book_key(user_id, bid, "hero.png")),
-                                       storage.get_image(user_id, bid, "photo"), width, height)
+                                       storage.get_image(user_id, bid, "photo"), width, height, pages=pages)
     storage.put_blob(book_key(user_id, bid, "print-interior.pdf"), interior)
     storage.put_blob(book_key(user_id, bid, "print-cover.pdf"), cover)
     info = {
@@ -188,7 +188,7 @@ def place_order(book_id):
         return again("Sorry, we can't ship to this address yet. You haven't been charged.")
 
     order_id = printing.new_order_id()
-    title = f"{s['title']}, starring {b['details']['name']}"
+    title = pdf.full_title(s, b["details"]["name"])
     if not ledger.charge_for_print(storage, user["id"], order_id, price, f"Printed book: {title}"):
         return again("Your balance is too low for a printed book.")
     record = {

@@ -343,8 +343,15 @@ def _face_closeup(png, box):
     return buf.getvalue()
 
 
+def book_words(book: dict):
+    """The child's name and pronoun for the story text (older books have no pronoun: the story's default)."""
+    d = (book or {}).get("details", {})
+    return d.get("name"), d.get("pronoun")
+
+
 def _hero_refs(storage, user_id, book_id, hero):
-    return {"full": hero,
+    name, pronoun = book_words(storage.get_book(user_id, book_id))
+    return {"name": name, "pronoun": pronoun, "full": hero,
             "jpg": assets.jpeg(hero, 1024),
             "face": storage.get_blob(book_key(user_id, book_id, "hero-face.jpg")) or face_closeup(hero, None)}
 
@@ -372,7 +379,7 @@ def _make_page(storage, user_id, book_id, s, number, refs, meter, cancel=None):
 
             png, check, tries = assets.draw_checked(
                 make,
-                lambda img: ai.inspect_page(img, page["scene"], page["text"], refs["jpg"], cast_note, meter=meter,
+                lambda img: ai.inspect_page(img, page["scene"], stories.page_text(s, page), refs["jpg"], cast_note, meter=meter,
                                             face_png=refs["face"], must=stories.must(s, page)),
                 f"{book_id}/{name}",
                 on_attempt=_progress(storage, user_id, book_id, name),
@@ -387,10 +394,12 @@ def _make_page(storage, user_id, book_id, s, number, refs, meter, cancel=None):
         # pre-drawn scene (the swap keeps the scene's layout, so both apply).
         if check.get("zones"):
             # this picture's own inspection says which text spots are clear
-            layout = template.place_text(page["text"], check.get("regions", []), page["zone"], art, check["zones"])
+            layout = template.place_text(stories.page_text(s, page, refs.get("name"), refs.get("pronoun")),
+                                         check.get("regions", []), page["zone"], art, check["zones"])
         else:
             # pre-drawn scene used as-is (hero not on the page): use the scene's own inspection
-            layout = template.place_text(page["text"], plate.get("regions", []), page["zone"], art, plate.get("zones"))
+            layout = template.place_text(stories.page_text(s, page, refs.get("name"), refs.get("pronoun")),
+                                         plate.get("regions", []), page["zone"], art, plate.get("zones"))
         storage.put_blob(book_key(user_id, book_id, file_for(name)), art)
         storage.put_blob(book_key(user_id, book_id, thumb_for(name)), assets.jpeg(art, 360, 80))
         storage.set_image_status(user_id, book_id, name, "done", attempt=tries, score=check.get("score", 0),
@@ -416,7 +425,8 @@ def relayout(storage, user_id, book: dict) -> dict:
         art = storage.get_blob(book_key(user_id, book["book_id"], file_for(name)))
         plate = assets.plate(storage, s["id"], n)
         page = s["pages"][n - 1]
-        layout = template.place_text(page["text"], plate.get("regions", []), page["zone"], art, plate.get("zones"))
+        layout = template.place_text(stories.page_text(s, page, *book_words(book)),
+                                     plate.get("regions", []), page["zone"], art, plate.get("zones"))
         changes[n] = ((info.get("layout") or {}).get("slot"), layout["slot"])
         storage.set_image_status(user_id, book["book_id"], name, "done",
                                  **{k: v for k, v in info.items() if k not in ("status", "layout")}, layout=layout)

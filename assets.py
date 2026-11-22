@@ -289,7 +289,7 @@ def prepare_plates(storage, story_id, pages=None, quality="medium", workers=8, s
         cast_note = "Characters who should appear: " + "; ".join(s["bible"][c] for c in page["cast"]) if page["cast"] else ""
         png, check, n = draw_checked(
             lambda: ai.draw(prompt, refs, quality=quality, label=f"{story_id} page {page['number']}"),
-            lambda img: ai.inspect_page(img, page["scene"], page["text"], bible["hero"] if hero else None, cast_note,
+            lambda img: ai.inspect_page(img, page["scene"], stories.page_text(s, page), bible["hero"] if hero else None, cast_note,
                                         must=stories.must(s, page)),
             f"{story_id}/plate/{page['number']:02d}", errors=errors)
         if png is None:
@@ -328,7 +328,7 @@ def recheck_plates(storage, story_id, pages=None, workers=8, say=print):
         img = storage.get_blob(rec["jpeg"])
         cast_note = "Characters who should appear: " + "; ".join(s["bible"][c] for c in page["cast"]) if page["cast"] else ""
         try:
-            check = ai.inspect_page(img, page["scene"], page["text"], hero if rec.get("hero") else None, cast_note)
+            check = ai.inspect_page(img, page["scene"], stories.page_text(s, page), hero if rec.get("hero") else None, cast_note)
         except Exception as e:  # noqa: BLE001
             say(f"  FAILED  page {page['number']:2d}: {str(e)[:150]}")
             return

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ story.title }}, starring {{ values.name }}{% endblock %}
+{% block title %}{{ full_title(story, values.name) }}{% endblock %}
 {% block style %}
   .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
   .head h1 { margin: 0; }
@@ -20,8 +20,8 @@
   .stage.done .dot { background: var(--good); }
   @keyframes pulse { 50% { opacity: .45; } }
   .now { font-family: var(--serif); font-weight: 600; font-size: 24px; margin: 0 0 12px; }
-  .bar-outer { height: 16px; background: #efe9f9; border-radius: 99px; overflow: hidden; box-shadow: inset 0 2px 3px rgba(31,32,65,.08); }
-  .bar-inner { height: 100%; width: 0; border-radius: 99px; transition: width .5s ease; background: linear-gradient(90deg, var(--brand), #9b6bff 60%, var(--coral)); background-size: 200% 100%; position: relative; }
+  .bar-outer { height: 16px; background: #e8f0fd; border-radius: 99px; overflow: hidden; box-shadow: inset 0 2px 3px rgba(31,32,65,.08); }
+  .bar-inner { height: 100%; width: 0; border-radius: 99px; transition: width .5s ease; background: linear-gradient(90deg, var(--brand), #5aa8ff 60%, var(--coral)); background-size: 200% 100%; position: relative; }
   .bar-inner::after { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(-45deg, rgba(255,255,255,.18) 0 10px, transparent 10px 20px); animation: slide 1s linear infinite; border-radius: inherit; }
   @keyframes slide { to { background-position: 28px 0; } }
   .count { font-size: 14px; font-weight: 700; color: var(--muted); display: flex; justify-content: space-between; margin-top: 8px; }
@@ -37,7 +37,7 @@
   .tile.done .state { color: var(--good); font-weight: 700; }
   .tile.failed .state { color: var(--danger); }
   .tile.retrying .state { color: #9a6a00; }
-  .spinner { width: 24px; height: 24px; border: 3px solid #d9d0f7; border-top-color: var(--brand); border-radius: 50%; animation: spin 1s linear infinite; }
+  .spinner { width: 24px; height: 24px; border: 3px solid #c7d8fb; border-top-color: var(--brand); border-radius: 50%; animation: spin 1s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* finished preview: exactly the PDF's layout */
@@ -81,10 +81,17 @@
   .txt.dark { color: #fff5dc; text-shadow: 0 0 .5cqw rgba(14,12,22,.85), 0 0 1.2cqw rgba(14,12,22,.55); }
   .txt.dark::before { background: rgba(14,12,22,.42); }
   .txt.paper { color: #3b2614; }
-  .cover { background: var(--cover); color: #fff5dc; }
-  .cover .tl { position: absolute; left: 0; right: 0; text-align: center; font-family: "Times New Roman", Times, serif; font-weight: bold; font-size: 7.87cqw; line-height: 1; }
-  .cover img { position: absolute; object-fit: cover; outline: 1.4cqw solid #fff5dc; border-radius: .6cqw; }
-  .cover .star { position: absolute; left: 0; right: 0; bottom: 4.6%; text-align: center; font-style: italic; font-family: "Times New Roman", serif; font-size: 4.63cqw; }
+  /* the front cover, like the PDF: the book's own exciting page, full bleed, with a big outlined title */
+  .cover { background: var(--cover); }
+  .cover > img.art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .cover > img.hero { position: absolute; left: 50% !important; transform: translateX(-50%); width: 55.6%; aspect-ratio: 2/3; object-fit: cover; outline: 1.4cqw solid #fff7e6; border-radius: .6cqw; }
+  .cover .shade { position: absolute; left: 0; right: 0; pointer-events: none; }
+  .cover .shade.top { top: 0; background: linear-gradient(to bottom, rgba(16,18,48,.59), rgba(16,18,48,0)); }
+  .cover .shade.bottom { bottom: 0; background: linear-gradient(to top, rgba(16,18,48,.59), rgba(16,18,48,0)); }
+  .cover .ct { position: absolute; left: 0; right: 0; text-align: center; font-family: "Fredoka", "Nunito", sans-serif; font-weight: 700; line-height: 1; white-space: nowrap;
+               -webkit-text-stroke-color: #1b1f4a; paint-order: stroke fill; text-shadow: .5cqw .9cqw 0 rgba(10,12,38,.45); }
+  .cover .rb { position: absolute; display: flex; align-items: center; justify-content: center; background: #ffc845; color: #1b1f4a; border: .5cqw solid #1b1f4a; border-radius: 999px;
+               font-family: "Fredoka", "Nunito", sans-serif; font-weight: 700; letter-spacing: .5cqw; box-shadow: .5cqw .7cqw 0 rgba(10,12,38,.35); white-space: nowrap; }
   .about .in { position: absolute; inset: 0; padding: 8cqw 9cqw; font-size: 3.1cqw; color: var(--ink); }
   .about h3 { font-family: "Times New Roman", serif; text-align: center; margin: 0 0 3cqw; font-size: 7cqw; }
   .compare { display: flex; justify-content: center; gap: 4cqw; }
@@ -112,7 +119,7 @@
 {% block content %}
   <div class="head">
     <div>
-      <h1>{{ story.title }}, starring {{ values.name }}</h1>
+      <h1>{{ full_title(story, values.name) }}</h1>
       <p class="sub">
         {% if book.status == 'done' %}Ready{% if book.timings and book.timings.total and not book.timings.retry %} · made in {{ book.timings.total|round|int }} seconds{% elif book.timings and book.timings.retry %} · finished after a retry{% endif %} · saved in <a href="{{ url_for('books') }}">My books</a>
         {% elif book.status == 'generating' %}You can leave this page: the book keeps going and is saved in <a href="{{ url_for('books') }}">My books</a>.
@@ -183,11 +190,14 @@
     {% set W, H = 432.0, 648.0 %}
     <div class="pages">
       <figure class="page">
-        {% set bx, by, bw, bh = cover.box %}
+        {% set art = images[cover.page] if cover.page and images|length > cover.page and images[cover.page].status == 'done' else none %}
         <div class="frame cover" style="--cover: {{ '#2e5c38' if story.id == 'jack' else '#8c1f1f' }}">
-          {% for line in cover.lines %}<div class="tl" style="top: {{ (64 + 40 * loop.index0 - 25) / H * 100 }}%">{{ line }}</div>{% endfor %}
-          <img src="{{ images[0].full }}" data-full="{{ images[0].full }}" alt="{{ values.name }} as {{ story.hero_name }}" style="left:{{ bx / W * 100 }}%; bottom:{{ by / H * 100 }}%; width:{{ bw / W * 100 }}%; height:{{ bh / H * 100 }}%">
-          <div class="star">starring {{ values.name }}</div>
+          {% if art %}<img class="art" src="{{ art.full }}" data-full="{{ art.full }}" alt="{{ full_title(story, values.name) }}">
+          {% else %}<img class="hero" src="{{ images[0].full }}" data-full="{{ images[0].full }}" alt="{{ values.name }} as {{ story.hero_name }}" style="{{ 'bottom: 10.8%' if cover.where == 'top' else 'top: 10.8%' }}">{% endif %}
+          {% set y0, y1 = cover.shade %}
+          <div class="shade {{ cover.where }}" style="height: {{ (y1 - y0) / H * 100 }}%"></div>
+          {% for l in cover.lines %}<div class="ct" style="bottom: {{ (l.y - l.size * 0.2) / H * 100 }}%; font-size: {{ l.size / W * 100 }}cqw; color: {{ l.color }}; -webkit-text-stroke-width: {{ l.size * 0.16 / W * 100 }}cqw">{{ l.text }}</div>{% endfor %}
+          {% if cover.ribbon %}{% set r = cover.ribbon %}<div class="rb" style="left: {{ r.x / W * 100 }}%; bottom: {{ r.y / H * 100 }}%; width: {{ r.w / W * 100 }}%; height: {{ r.h / H * 100 }}%; font-size: {{ r.size / W * 100 }}cqw">{{ r.text }}</div>{% endif %}
         </div>
         <figcaption class="cap"><span>Cover</span><span class="q {{ '' if images[0].passed else 'best' }}">{{ images[0].state }}</span></figcaption>
       </figure>
@@ -221,7 +231,7 @@
       {% endfor %}
 
       <figure class="page">
-        <div class="frame paperpage"><div class="end"><div class="end-t">The End</div><div class="end-s">starring {{ values.name }}</div></div></div>
+        <div class="frame paperpage"><div class="end"><div class="end-t">The End</div>{% if not story.title_with_name %}<div class="end-s">featuring {{ values.name }}</div>{% endif %}</div></div>
         <figcaption class="cap"><span>The End</span></figcaption>
       </figure>
 

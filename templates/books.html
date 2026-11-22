@@ -11,7 +11,7 @@
   .thumb::after { content: ""; position: absolute; inset: 0; box-shadow: inset 6px 0 0 rgba(0,0,0,.16), inset 8px 0 0 rgba(255,255,255,.14); border-radius: inherit; pointer-events: none; }
   .item:hover .thumb { transform: translateY(-5px) rotate(-1.5deg); box-shadow: 0 22px 36px rgba(31,32,65,.22), 0 4px 10px rgba(31,32,65,.12); }
   .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .thumb .spin { width: 30px; height: 30px; border: 4px solid #d9d0f7; border-top-color: var(--brand); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+  .thumb .spin { width: 30px; height: 30px; border: 4px solid #c7d8fb; border-top-color: var(--brand); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
   @keyframes spin { to { transform: rotate(360deg); } }
   .thumb.jack { background: #2e5c38; }
   .thumb.red { background: #8c1f1f; }
@@ -23,7 +23,7 @@
   .name { font-family: var(--serif); font-weight: 600; font-size: 19px; margin-top: 14px; line-height: 1.2; }
   .story { font-size: 14px; color: var(--muted); font-weight: 600; }
   .meta { font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .new { border: 2.5px dashed #cfc6f5; background: linear-gradient(180deg, #faf9ff, #f1edff); box-shadow: none; flex-direction: column; gap: 12px; color: var(--brand); }
+  .new { border: 2.5px dashed #b9cff7; background: linear-gradient(180deg, #f7faff, #eaf1ff); box-shadow: none; flex-direction: column; gap: 12px; color: var(--brand); }
   .new::after { display: none; }
   .new .plus { width: 54px; height: 54px; border-radius: 18px; background: var(--brand); color: #fff; font: 700 32px/1 var(--serif); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 0 var(--brand-dark); transform: rotate(-6deg); }
   .item:hover .new { transform: translateY(-5px); box-shadow: none; border-color: var(--brand); }
@@ -42,7 +42,7 @@
   </div>
   {% if not books %}
     <div class="card empty">
-      <svg class="art" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="20" fill="#efecff"/><path d="M12 20c7-3 14-3 20 2v26c-6-5-13-5-20-2z" fill="#5b47e0"/><path d="M52 20c-7-3-14-3-20 2v26c6-5 13-5 20-2z" fill="#8f80ff"/><path d="M47 7l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z" fill="#ffc845"/></svg>
+      <svg class="art" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="20" fill="#e7efff"/><path d="M12 20c7-3 14-3 20 2v26c-6-5-13-5-20-2z" fill="#2f6fed"/><path d="M52 20c-7-3-14-3-20 2v26c6-5 13-5 20-2z" fill="#7aa7ff"/><path d="M47 7l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z" fill="#ffc845"/></svg>
       <h2>Your bookshelf is empty</h2>
       <p>Make your first storybook: pick a story, add a photo, and watch the pages appear.</p>
       <a class="btn" href="{{ url_for('index') }}">Make your first book</a>

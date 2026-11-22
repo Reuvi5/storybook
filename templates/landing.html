@@ -27,7 +27,9 @@
   .stage { position: relative; min-height: 470px; display: flex; align-items: center; justify-content: center; }
   @media (max-width: 860px) { .stage { min-height: 400px; } }
   @media (max-width: 480px) { .stage { min-height: 330px; } }
-  .blob { position: absolute; inset: 6% 4% 4% 8%; border-radius: 46% 54% 48% 52% / 55% 45% 55% 45%; background: linear-gradient(135deg, #ece8ff, #fff0cc); }
+  .blob { position: absolute; inset: 4% 2% 2% 6%; border-radius: 46% 54% 48% 52% / 55% 45% 55% 45%; background: linear-gradient(170deg, #9ccbff 0%, #cfe6ff 45%, #fff3cf 100%); box-shadow: inset 0 -30px 60px rgba(255,255,255,.5); overflow: hidden; }
+  .cloud { position: absolute; z-index: 1; fill: #fff; opacity: .95; filter: drop-shadow(0 6px 10px rgba(47,111,237,.18)); }
+  .cloud.c1 { width: 120px; left: 2%; top: 30%; } .cloud.c2 { width: 90px; right: 0; top: 64%; } .cloud.c3 { width: 70px; left: 40%; top: 2%; opacity: .8; }
   .bk { position: absolute; width: 46%; max-width: 250px; aspect-ratio: 2 / 3; border-radius: 6px 14px 14px 6px; overflow: hidden; color: #fff5dc;
         box-shadow: inset 7px 0 0 rgba(0,0,0,.18), inset 9px 0 0 rgba(255,255,255,.12), 0 22px 40px rgba(31,32,65,.25), 0 4px 10px rgba(31,32,65,.15); transition: transform .35s ease; }
   .bk.one { left: 10%; top: 8%; transform: rotate(-7deg); z-index: 2; }
@@ -35,8 +37,17 @@
   .stage:hover .bk.one { transform: rotate(-9deg) translateY(-6px); }
   .stage:hover .bk.two { transform: rotate(8deg) translateY(-6px); }
   .bk .t { position: absolute; top: 7%; left: 8%; right: 8%; text-align: center; font-family: "Times New Roman", Times, serif; font-weight: bold; font-size: clamp(15px, 2.1vw, 22px); line-height: 1.05; }
-  .bk .art { position: absolute; left: 12%; right: 12%; top: 27%; bottom: 15%; border: 3px solid #fff5dc; border-radius: 3px; background: rgba(255,255,255,.15); overflow: hidden; }
+  .bk .art { position: absolute; inset: 0; overflow: hidden; }
+  .bk .shade { position: absolute; left: 0; right: 0; height: 42%; }
+  .bk .shade.top { top: 0; background: linear-gradient(to bottom, rgba(16,18,48,.6), rgba(16,18,48,0)); }
+  .bk .shade.bottom { bottom: 0; background: linear-gradient(to top, rgba(16,18,48,.6), rgba(16,18,48,0)); }
+  .bk .ct { position: absolute; left: 4%; right: 4%; text-align: center; font-family: var(--serif); font-weight: 700; line-height: 1.02; color: #fff7e6;
+            -webkit-text-stroke: 4px #1b1f4a; paint-order: stroke fill; text-shadow: 2px 4px 0 rgba(10,12,38,.45); }
+  .bk .ct .nm { display: block; color: #ffc845; font-size: 1.45em; letter-spacing: .01em; }
+  .bk .rb { display: inline-block; margin-top: 8px; background: #ffc845; color: #1b1f4a; border: 2px solid #1b1f4a; border-radius: 999px; padding: 3px 12px;
+            font-size: clamp(8px, 1vw, 11px); letter-spacing: .1em; white-space: nowrap; -webkit-text-stroke: 0; text-shadow: none; box-shadow: 2px 3px 0 rgba(10,12,38,.35); }
   .bk .art img, .storyc .pics img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.3); }
+  .bk .art img.whole { transform: none; }
   .bk .s { position: absolute; left: 0; right: 0; bottom: 5%; text-align: center; font-style: italic; font-family: "Times New Roman", serif; font-size: clamp(11px, 1.3vw, 14px); }
   .sticker { position: absolute; z-index: 4; background: #fff; border-radius: 999px; padding: 8px 14px; font-weight: 800; font-size: 13.5px; box-shadow: 0 10px 24px rgba(31,32,65,.16); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
   .sticker.a { left: 0; bottom: -14px; transform: rotate(-4deg); }
@@ -83,14 +94,14 @@
   .price .amt small { font-family: var(--sans); font-size: 15px; font-weight: 700; color: var(--muted); }
   .price ul { margin: 14px 0 0; padding-left: 20px; color: var(--muted); }
   .price li { margin: 4px 0; }
-  .price.feature { background: linear-gradient(160deg, #5b47e0, #3d2bb3); color: #fff; border: 0; position: relative; overflow: hidden; }
-  .price.feature ul, .price.feature .amt small { color: #dcd6ff; }
+  .price.feature { background: linear-gradient(160deg, #2f6fed, #1d4fc4); color: #fff; border: 0; position: relative; overflow: hidden; }
+  .price.feature ul, .price.feature .amt small { color: #d4e3ff; }
   .price.feature .tag { position: absolute; right: 18px; top: 18px; background: var(--sun); color: #3d2a00; border-radius: 999px; padding: 3px 11px; font-size: 12.5px; font-weight: 800; }
   .price h3 { font-family: var(--serif); font-weight: 600; font-size: 21px; margin: 0; }
 
-  .final { margin-top: 30px; border-radius: 28px; background: var(--ink); color: #fff; padding: 40px; display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap; position: relative; overflow: hidden; }
+  .final { margin-top: 30px; border-radius: 28px; background: linear-gradient(120deg, #1d4fc4, #2f6fed 55%, #5aa8ff); color: #fff; padding: 40px; display: flex; align-items: center; justify-content: space-between; gap: 22px; flex-wrap: wrap; position: relative; overflow: hidden; }
   .final h2 { font-size: 32px; margin: 0 0 4px; }
-  .final p { margin: 0; color: #c9c8e6; }
+  .final p { margin: 0; color: #e2ecff; }
   .final .google { box-shadow: 0 5px 0 #000; }
   .final::after { content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(255,200,69,.35), transparent 70%); pointer-events: none; }
 {% endblock %}
@@ -121,16 +132,19 @@
     </div>
     <div class="stage" aria-hidden="true">
       <div class="blob"></div>
-      {{ star('t1') }}{{ star('t2', '#ff6f59') }}{{ star('t3', '#5b47e0') }}
-      <div class="bk one" style="background:#2e5c38">
-        <div class="t">Jack and the Beanstalk</div>
-        <div class="art">{% if jack and jack.cover %}<img src="{{ jack.cover }}" alt="" style="transform-origin: center {{ jack.cover_focus }}">{% endif %}</div>
-        <div class="s">starring You</div>
+      <svg class="cloud c1" viewBox="0 0 120 60" aria-hidden="true"><path d="M24 54h76a18 18 0 0 0 0-36 26 26 0 0 0-49-6A20 20 0 0 0 24 54z"/></svg>
+      <svg class="cloud c2" viewBox="0 0 120 60" aria-hidden="true"><path d="M24 54h76a18 18 0 0 0 0-36 26 26 0 0 0-49-6A20 20 0 0 0 24 54z"/></svg>
+      <svg class="cloud c3" viewBox="0 0 120 60" aria-hidden="true"><path d="M24 54h76a18 18 0 0 0 0-36 26 26 0 0 0-49-6A20 20 0 0 0 24 54z"/></svg>
+      {{ star('t1') }}{{ star('t2', '#ff6f59') }}{{ star('t3', '#2f6fed') }}
+      <div class="bk one" style="background:#8c1f1f">
+        <div class="art">{% if red and red.cover %}<img class="whole" src="{{ red.cover }}" alt="">{% endif %}</div>
+        <div class="shade top"></div>
+        <div class="ct" style="top: 6%; font-size: clamp(17px, 2.2vw, 26px)">Little Red<br>Riding Hood<br><span class="rb">FEATURING YOUR CHILD</span></div>
       </div>
-      <div class="bk two" style="background:#8c1f1f">
-        <div class="t">Little Red Riding Hood</div>
-        <div class="art">{% if red and red.cover %}<img src="{{ red.cover }}" alt="" style="transform-origin: center {{ red.cover_focus }}">{% endif %}</div>
-        <div class="s">starring You</div>
+      <div class="bk two" style="background:#2e5c38">
+        <div class="art">{% if jack and jack.cover %}<img class="whole" src="{{ jack.cover }}" alt="">{% endif %}</div>
+        <div class="shade bottom"></div>
+        <div class="ct" style="bottom: 6%; font-size: clamp(15px, 1.9vw, 22px)"><span class="nm">YOUR CHILD</span>and the Beanstalk</div>
       </div>
       <span class="sticker a"><span class="dot"></span>Made just for them</span>
       <span class="sticker b">20 illustrated pages</span>
@@ -160,7 +174,7 @@
             {% for u in (s.samples or [none, none, none]) %}<div>{% if u %}<img src="{{ u.url }}" alt="" loading="lazy" style="transform-origin: center {{ u.focus }}">{% endif %}</div>{% endfor %}
           </div>
           <div class="body">
-            <span class="pill {{ s.id }}">They play {{ s.hero }}</span>
+            <span class="pill {{ s.id }}">{{ "Your child and the Beanstalk" if s.id == "jack" else "Featuring your child" }}</span>
             <h3>{{ s.title }}</h3>
             <p>{{ s.blurb }}</p>
           </div>

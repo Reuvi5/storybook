@@ -43,7 +43,7 @@ import stories  # noqa: E402
 import story as story_v1  # noqa: E402
 import wallet  # noqa: E402
 from auth import current_user, init_auth, login_required  # noqa: E402
-from book import build_pdf as build_pdf_v1, copyright_lines, cover_geometry  # noqa: E402
+from book import build_pdf as build_pdf_v1, copyright_lines, cover_spec, full_title  # noqa: E402
 from storage import book_key, content_type, get_storage, story_key  # noqa: E402
 
 try:
@@ -225,6 +225,9 @@ def story_cards() -> list:
     return cards
 
 
+app.jinja_env.globals["full_title"] = full_title
+
+
 @app.context_processor
 def inject_costs():
     def avg_cost():
@@ -290,6 +293,8 @@ def make():
     user = current_user()
 
     values = {"name": proper_name(request.form.get("name", ""))}
+    pronoun = request.form.get("pronoun", "")
+    values["pronoun"] = pronoun if pronoun in ("he", "she") else ""
     for key, _label, max_len in DETAILS:
         values[key] = request.form.get(key, "").strip()[:max_len]
     story_id = request.form.get("story", "")
@@ -304,6 +309,8 @@ def make():
         return form_error("That story isn't ready yet. Please choose the other one.")
     if not values["name"]:
         return form_error("Please enter the name.")
+    if not values["pronoun"]:
+        return form_error("Please choose boy or girl, so the story says he or she.", {"pronoun": "Please choose one."})
     upload = request.files.get("photo")
     if not upload or not upload.filename:
         return form_error("Please upload a photo.")
@@ -316,7 +323,7 @@ def make():
 
     # Nothing inappropriate gets drawn or printed: check the name and About Me before charging.
     check_meter = ai.Meter()
-    problems = checks.check_details(values, check_meter)
+    problems = checks.check_details({k: v for k, v in values.items() if k != "pronoun"}, check_meter)
     if problems.get("_service"):
         return form_error(problems["_service"])
     if problems:
@@ -334,7 +341,7 @@ def make():
 
     now = int(time.time())
     book_id = uuid.uuid4().hex
-    if not ledger.charge_for_book(storage, user["id"], book_id, f"{stories.get_story(story_id)['title']}, starring {values['name']}"):
+    if not ledger.charge_for_book(storage, user["id"], book_id, stories.book_title(stories.get_story(story_id), values["name"]) + ("" if stories.get_story(story_id).get("title_with_name") else f", featuring {values['name']}")):
         return form_error(f"Each book costs {ledger.money(ledger.BOOK_PRICE_CENTS)}, and your balance is "
                           f"{ledger.money(storage.get_balance(user['id']))}. Add funds in your Wallet first.")
     storage.put_image(user["id"], book_id, "photo", photo)
@@ -358,7 +365,7 @@ def books():
         if b.get("version", 1) >= 2:
             done = b["images"].get("hero", {}).get("status") == "done"
             b["cover_url"] = file_url(book_key(user["id"], b["book_id"], "thumb-hero.jpg")) if done else None
-            b["title"] = stories.get_story(b["story_id"])["title"]
+            b["title"] = stories.book_title(stories.get_story(b["story_id"]), b["details"].get("name"))
         else:
             done = b["images"].get("character", {}).get("status") == "done"
             b["cover_url"] = url_for("image", book_id=b["book_id"], name="character") if done else None
@@ -383,7 +390,7 @@ def book(book_id):
         stage_label=generator.STAGES.get(b.get("stage"), ""), pages=s["pages"],
         failed=[i for i in images if i["status"] == "failed"],
         photo_url=url_for("image", book_id=book_id, name="photo"), now_ts=int(time.time()),
-        cover=cover_geometry(s["title"]), copyright=copyright_lines(s["title"], b["details"]["name"], book_id, b["created_at"]),
+        cover=cover_spec(s, b["details"]["name"]), copyright=copyright_lines(s, b["details"]["name"], book_id, b["created_at"]),
         print_price=ledger.PRINT_PRICE_CENTS,
     )
 

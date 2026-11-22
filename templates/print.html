@@ -35,7 +35,7 @@
 <div class="wrap">
   <p class="hint"><a href="{{ url_for('book', book_id=book.book_id) }}">← Back to the book</a></p>
   <h1>Order a printed copy</h1>
-  <p class="sub">{{ story.title }}, starring {{ book.details.name }}</p>
+  <p class="sub">{{ full_title(story, book.details.name) }}</p>
 
   <div class="sandbox"><strong>Test store.</strong> Nothing is actually printed or shipped, and no real money is charged.</div>
 

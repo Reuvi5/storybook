@@ -16,7 +16,7 @@
   .stories { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 560px) { .stories { grid-template-columns: 1fr; } }
   .story { position: relative; display: flex; gap: 16px; align-items: center; border: 2px solid var(--line); border-radius: 18px; padding: 12px; cursor: pointer; background: #fff; transition: border-color .15s, box-shadow .15s, transform .15s; }
-  .story:hover { border-color: #d5cbf9; transform: translateY(-2px); }
+  .story:hover { border-color: #c3d6fb; transform: translateY(-2px); }
   .story input { position: absolute; opacity: 0; pointer-events: none; }
   .story:has(input:checked) { border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
   .story:has(input:focus-visible) { outline: 3px solid var(--sun); outline-offset: 2px; }
@@ -28,7 +28,14 @@
   .story .cov img { width: 100%; height: 100%; object-fit: cover; display: block; transform: scale(1.3); }
   .story strong { display: block; font-family: var(--serif); font-weight: 600; font-size: 18px; line-height: 1.2; margin-bottom: 4px; }
   .story span { font-size: 13.5px; color: var(--muted); }
-  label.f { display: block; font-weight: 800; font-size: 14.5px; margin: 16px 0 6px; }
+  label.f, div.f { display: block; font-weight: 800; font-size: 14.5px; margin: 16px 0 6px; }
+  .choice { display: flex; gap: 10px; }
+  .pill-opt { position: relative; cursor: pointer; }
+  .pill-opt input { position: absolute; opacity: 0; pointer-events: none; }
+  .pill-opt span { display: inline-block; padding: 10px 26px; border: 2px solid var(--line); border-radius: 999px; font-weight: 800; background: #fff; transition: border-color .15s, background .15s, color .15s; }
+  .pill-opt:hover span { border-color: var(--brand); }
+  .pill-opt input:checked + span { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+  .pill-opt input:focus-visible + span { outline: 3px solid var(--sun); outline-offset: 2px; }
   .opt { font-weight: 600; color: var(--muted); }
   input[type=text], textarea { width: 100%; padding: 12px 14px; border: 2px solid var(--line); border-radius: 14px; font-size: 16px; background: #fff; font-family: inherit; color: var(--ink); transition: border-color .15s, box-shadow .15s; }
   input[type=text]:focus, textarea:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 4px var(--brand-soft); }
@@ -37,10 +44,10 @@
   .ferr { color: var(--danger); font-size: 13.5px; font-weight: 700; margin-top: 6px; }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; }
   @media (max-width: 560px) { .grid { grid-template-columns: 1fr; } }
-  .drop { display: flex; gap: 18px; align-items: center; border: 2.5px dashed #cfc6f5; border-radius: 18px; padding: 18px; cursor: pointer; background: linear-gradient(180deg, #faf9ff, #f4f1ff); transition: border-color .15s, background .15s; }
-  .drop:hover { border-color: var(--brand); background: #f1edff; }
+  .drop { display: flex; gap: 18px; align-items: center; border: 2.5px dashed #b9cff7; border-radius: 18px; padding: 18px; cursor: pointer; background: linear-gradient(180deg, #f7faff, #eef4ff); transition: border-color .15s, background .15s; }
+  .drop:hover { border-color: var(--brand); background: #eaf1ff; }
   .drop input { display: none; }
-  .drop .pv { width: 86px; height: 86px; border-radius: 22px; background: #fff center/cover no-repeat; flex: none; display: flex; align-items: center; justify-content: center; color: var(--brand); font-size: 26px; font-weight: 800; box-shadow: 0 6px 16px rgba(91,71,224,.16); }
+  .drop .pv { width: 86px; height: 86px; border-radius: 22px; background: #fff center/cover no-repeat; flex: none; display: flex; align-items: center; justify-content: center; color: var(--brand); font-size: 26px; font-weight: 800; box-shadow: 0 6px 16px rgba(47,111,237,.16); }
   .drop .pv svg { width: 38px; height: 38px; }
   .drop strong { font-family: var(--serif); font-weight: 600; font-size: 18px; color: var(--ink); word-break: break-all; }
   .pay { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; background: var(--ink); color: #fff; border: 0; }
@@ -72,7 +79,7 @@
                    {% if (chosen or '') == s.id or (not chosen and s.ready and loop.first) %}checked{% endif %} required>
             <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <div class="cov">{% if s.cover %}<img src="{{ s.cover }}" alt="" style="transform-origin: center {{ s.cover_focus }}">{% endif %}</div>
-            <div><strong>{{ s.title }}</strong><span>{% if s.ready %}20 pages · they play {{ s.hero }}{% else %}Coming soon{% endif %}</span></div>
+            <div><strong>{{ s.title }}</strong><span>{% if s.ready %}20 pages · starring your child{% else %}Coming soon{% endif %}</span></div>
           </label>
         {% endfor %}
       </div>
@@ -93,6 +100,14 @@
       <label class="f" for="name">Name</label>
       <input type="text" id="name" name="name" maxlength="40" required value="{{ values.get('name', '') }}" {% if field_errors and field_errors.name %}class="bad" aria-invalid="true"{% endif %}>
       {% if field_errors and field_errors.name %}<div class="ferr">{{ field_errors.name }}</div>{% endif %}
+      <div class="f" id="pronoun-label" style="margin-top:16px">Your child is a</div>
+      <div class="choice" role="radiogroup" aria-labelledby="pronoun-label">
+        {% for v, label in [('he', 'Boy'), ('she', 'Girl')] %}
+          <label class="pill-opt"><input type="radio" name="pronoun" value="{{ v }}" required {{ 'checked' if values.get('pronoun') == v }}><span>{{ label }}</span></label>
+        {% endfor %}
+      </div>
+      <p class="hint">So the story says "he" or "she".</p>
+      {% if field_errors and field_errors.pronoun %}<div class="ferr">{{ field_errors.pronoun }}</div>{% endif %}
       <div class="grid">
         {% for key, label, max_len in details if key != 'about' %}
           <div>
