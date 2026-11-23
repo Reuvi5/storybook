@@ -86,8 +86,22 @@ def _find_stand_in_heads():
 
 
 
-if (os.environ.get("OPENAI_API_KEY") or ai.FAKE) and not os.environ.get("STORYBOOK_TESTING"):
-    threading.Thread(target=_find_stand_in_heads, name="stand-in-heads", daemon=True).start()
+_heads_started = threading.Lock()
+_heads_running = False
+
+
+@app.before_request
+def _start_background_jobs():
+    """Start the stand-in head job on the first visit, inside the process that serves the site.
+    Starting it while the app loads is unsafe on Render: gunicorn there loads the app first and then
+    splits off the web process, and a split in the middle of a running job can freeze the copy."""
+    global _heads_running
+    if _heads_running or os.environ.get("STORYBOOK_TESTING") or not (os.environ.get("OPENAI_API_KEY") or ai.FAKE):
+        return
+    with _heads_started:
+        if not _heads_running:
+            _heads_running = True
+            threading.Thread(target=_find_stand_in_heads, name="stand-in-heads", daemon=True).start()
 
 
 # ---------------------------------------------------------------------------

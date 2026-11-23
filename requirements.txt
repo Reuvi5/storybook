@@ -1,5 +1,5 @@
 flask>=3.0
-gunicorn>=22.0
+gunicorn>=22.0,<27  # 26.x is what runs locally; 27 (Nov 2026) is brand new
 openai>=1.60
 pillow>=10.0
 pillow-heif>=0.16
