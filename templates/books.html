@@ -36,16 +36,16 @@
   <div class="top">
     <div>
       <h1>My books</h1>
-      <p class="sub">Every book you make is saved here.</p>
+      <p class="sub">Every book you've made, saved and ready to read again.</p>
     </div>
     {% if books %}<a class="btn" href="{{ url_for('index') }}">+ New book</a>{% endif %}
   </div>
   {% if not books %}
     <div class="card empty">
       <svg class="art" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="20" fill="#e7efff"/><path d="M12 20c7-3 14-3 20 2v26c-6-5-13-5-20-2z" fill="#2f6fed"/><path d="M52 20c-7-3-14-3-20 2v26c6-5 13-5 20-2z" fill="#7aa7ff"/><path d="M47 7l2.2 4.6 5 .7-3.6 3.5.9 5-4.5-2.4-4.5 2.4.9-5-3.6-3.5 5-.7z" fill="#ffc845"/></svg>
-      <h2>Your bookshelf is empty</h2>
-      <p>Make your first storybook: pick a story, add a photo, and watch the pages appear.</p>
-      <a class="btn" href="{{ url_for('index') }}">Make your first book</a>
+      <h2>Your bookshelf is waiting</h2>
+      <p>Create your first storybook and watch your child become the hero.</p>
+      <a class="btn" href="{{ url_for('index') }}">Create your first book</a>
     </div>
   {% else %}
     <div class="grid">

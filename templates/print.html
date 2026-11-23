@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Order a printed copy · Storybook{% endblock %}
+{% block title %}Get the hardcover · Storybook{% endblock %}
 {% block style %}
   .wrap { max-width: 900px; margin: 0 auto; }
   .sandbox { background: var(--warn-soft); border: 1px solid #f3dc9a; border-radius: 14px; padding: 10px 14px; font-size: 14px; margin-bottom: 22px; }
@@ -34,7 +34,7 @@
 {% block content %}
 <div class="wrap">
   <p class="hint"><a href="{{ url_for('book', book_id=book.book_id) }}">← Back to the book</a></p>
-  <h1>Order a printed copy</h1>
+  <h1>Turn it into a hardcover keepsake</h1>
   <p class="sub">{{ full_title(story, book.details.name) }}</p>
 
   <div class="sandbox"><strong>Test store.</strong> Nothing is actually printed or shipped, and no real money is charged.</div>

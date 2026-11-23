@@ -121,7 +121,7 @@
     <div>
       <h1>{{ full_title(story, values.name) }}</h1>
       <p class="sub">
-        {% if book.status == 'done' %}Ready{% if book.timings and book.timings.total and not book.timings.retry %} · made in {{ book.timings.total|round|int }} seconds{% elif book.timings and book.timings.retry %} · finished after a retry{% endif %} · saved in <a href="{{ url_for('books') }}">My books</a>
+        {% if book.status == 'done' %}Your book is ready!{% if book.timings and book.timings.total and not book.timings.retry %} · made in {{ book.timings.total|round|int }} seconds{% elif book.timings and book.timings.retry %} · finished after a retry{% endif %} · saved in <a href="{{ url_for('books') }}">My books</a>
         {% elif book.status == 'generating' %}You can leave this page: the book keeps going and is saved in <a href="{{ url_for('books') }}">My books</a>.
         {% endif %}
       </p>
@@ -129,7 +129,7 @@
     {% if book.status == 'done' %}
       <div class="actions">
         <a class="btn" href="{{ url_for('download', book_id=book_id) }}">Download PDF</a>
-        <a class="btn secondary" href="{{ url_for('orders.print_page', book_id=book_id) }}">Order a printed copy · {{ money(print_price) }}</a>
+        <a class="btn sun" href="{{ url_for('orders.print_page', book_id=book_id) }}">Get the hardcover · {{ money(print_price) }}</a>
         <form action="{{ url_for('delete', book_id=book_id) }}" method="post" onsubmit="return confirm('Delete this book for good?');"><button class="btn danger">Delete</button></form>
       </div>
     {% endif %}

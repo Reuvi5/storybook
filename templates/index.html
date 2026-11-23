@@ -63,7 +63,7 @@
     <div class="badge" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 2l2.6 6.8L22 9.6l-5.6 4.8 1.8 7.2L12 17.8 5.8 21.6l1.8-7.2L2 9.6l7.4-.8z" fill="#fff" stroke="#3d2a00" stroke-width="1.6" stroke-linejoin="round"/></svg></div>
     <div>
       <h1>Make a new storybook</h1>
-      <p class="sub">A 20-page picture book starring your child, ready in about a minute.</p>
+      <p class="sub">In about a minute, your child becomes the hero of their very own fairy tale.</p>
     </div>
   </div>
 
@@ -71,7 +71,7 @@
 
   <form action="{{ url_for('make') }}" method="post" enctype="multipart/form-data" id="form">
     <section class="card step">
-      <h2><span class="num c1">1</span> Choose a story</h2>
+      <h2><span class="num c1">1</span> Choose their adventure</h2>
       <div class="stories">
         {% for s in stories %}
           <label class="story">
@@ -79,7 +79,7 @@
                    {% if (chosen or '') == s.id or (not chosen and s.ready and loop.first) %}checked{% endif %} required>
             <span class="tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             <div class="cov">{% if s.cover %}<img src="{{ s.cover }}" alt="" style="transform-origin: center {{ s.cover_focus }}">{% endif %}</div>
-            <div><strong>{{ s.title }}</strong><span>{% if s.ready %}20 pages · starring your child{% else %}Coming soon{% endif %}</span></div>
+            <div><strong>{{ s.title }}</strong><span>{% if s.ready %}20 illustrated pages{% else %}Coming soon{% endif %}</span></div>
           </label>
         {% endfor %}
       </div>
@@ -89,14 +89,14 @@
       <h2><span class="num c2">2</span> Add a photo</h2>
       <label class="drop" for="photo">
         <div class="pv" id="pv"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6h1.7l1.3-2h5l1.3 2h1.7A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.5" r="3.6" fill="none" stroke="currentColor" stroke-width="1.8"/></svg></div>
-        <div><strong id="pvname">Choose a photo</strong><div class="hint">A clear photo of their face in good light works best. It also goes on the About Me page.</div></div>
+        <div><strong id="pvname">Choose a photo</strong><div class="hint">A clear, smiling photo in good light works best. It also goes on the About Me page.</div></div>
         <input type="file" id="photo" name="photo" accept="image/*,.heic" required>
       </label>
     </section>
 
     <section class="card step">
       <h2><span class="num c3">3</span> About Me</h2>
-      <p class="hint" style="margin-top:-4px">This goes on the back cover.</p>
+      <p class="hint" style="margin-top:-4px">Make it personal: this goes on the back cover.</p>
       <label class="f" for="name">Name</label>
       <input type="text" id="name" name="name" maxlength="40" required value="{{ values.get('name', '') }}" {% if field_errors and field_errors.name %}class="bad" aria-invalid="true"{% endif %}>
       {% if field_errors and field_errors.name %}<div class="ferr">{{ field_errors.name }}</div>{% endif %}
@@ -121,7 +121,7 @@
         <a class="btn sun" href="{{ url_for('wallet.wallet') }}">Add funds</a>
       {% else %}
         <div class="price"><b>{{ money(price) }}</b> from your balance of {{ money(balance or 0) }}</div>
-        <button type="submit" class="btn sun" id="go">Make my storybook</button>
+        <button type="submit" class="btn sun" id="go">Create their book</button>
       {% endif %}
     </div>
   </form>

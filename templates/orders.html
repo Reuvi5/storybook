@@ -14,9 +14,9 @@
 {% endblock %}
 {% block content %}
   <h1>{{ 'Order' if one else 'Orders' }}</h1>
-  <p class="sub">Printed copies of your books. This is a test store, so nothing is actually printed or shipped.</p>
+  <p class="sub">Your hardcover keepsakes. This is a test store, so nothing is actually printed or shipped.</p>
   {% if not orders %}
-    <div class="card"><p style="margin:0">No printed orders yet. Open a finished book in <a href="{{ url_for('books') }}">My books</a> and choose "Order a printed copy".</p></div>
+    <div class="card"><p style="margin:0">No hardcovers yet. A printed copy makes the perfect gift: open a finished book in <a href="{{ url_for('books') }}">My books</a> and choose "Get the hardcover".</p></div>
   {% endif %}
   <div class="list">
     {% for o in orders %}

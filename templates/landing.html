@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Storybook · A picture book starring your child{% endblock %}
+{% block title %}Storybook · The picture book where your child is the hero{% endblock %}
 {% block style %}
   main { padding-top: 24px; }
   .hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 40px; align-items: center; padding: 26px 0 56px; }
@@ -117,17 +117,17 @@
   {% set red = stories|selectattr('id', 'equalto', 'red')|first if stories else none %}
   <div class="hero">
     <div>
-      <span class="eyebrow"><b>New</b> Order it as a printed hardcover</span>
+      <span class="eyebrow"><b>New</b> Hardcover keepsakes, delivered to your door</span>
       <h1>Your child is the <span class="hl">hero<svg viewBox="0 0 200 16" preserveAspectRatio="none" aria-hidden="true"><path d="M3 11c40-7 120-9 194-4" fill="none" stroke="#ffc845" stroke-width="7" stroke-linecap="round"/></svg></span> of the story</h1>
-      <p class="lead">Upload a photo of your child and get a 20-page picture book where they're the hero of <b>Jack and the Beanstalk</b> or <b>Little Red Riding Hood</b>. Read it, download it, or order a printed copy.</p>
+      <p class="lead">A one-of-a-kind picture book starring your little one. Add a photo, and in about a minute they're climbing <b>the Beanstalk</b> or outsmarting the Big Bad Wolf in <b>Little Red Riding Hood</b>.</p>
       <div class="cta">
         {{ google_button() }}
-        <span class="note">Books from <b>{{ money(price) }}</b></span>
+        <span class="note">Books from just <b>{{ money(price) }}</b></span>
       </div>
       <ul class="ticks">
-        <li>Looks like your child on every page</li>
-        <li>Ready in about a minute</li>
-        <li>An "About Me" page with their real photo</li>
+        <li>The perfect gift for birthdays and holidays</li>
+        <li>Ready to read in about a minute</li>
+        <li>A keepsake they'll treasure for years</li>
       </ul>
     </div>
     <div class="stage" aria-hidden="true">
@@ -146,19 +146,19 @@
         <div class="shade bottom"></div>
         <div class="ct" style="bottom: 6%; font-size: clamp(15px, 1.9vw, 22px)"><span class="nm">YOUR CHILD</span>and the Beanstalk</div>
       </div>
-      <span class="sticker a"><span class="dot"></span>Made just for them</span>
-      <span class="sticker b">20 illustrated pages</span>
+      <span class="sticker a"><span class="dot"></span>One of a kind, just like them</span>
+      <span class="sticker b">The perfect gift</span>
     </div>
   </div>
 
   <section class="block">
-    <p class="kicker">How it works</p>
-    <h2>Three easy steps</h2>
-    <p class="sub">All you need is one good photo.</p>
+    <p class="kicker">Easy as 1, 2, 3</p>
+    <h2>A little magic in three steps</h2>
+    <p class="sub">All it takes is one photo.</p>
     <div class="steps">
-      <div class="card stepc"><div class="n">1</div><h3>Pick a story</h3><p>A classic fairy tale, with your child in the main role.</p></div>
-      <div class="card stepc"><div class="n">2</div><h3>Add a photo</h3><p>A clear photo of their face. We turn it into a storybook character who looks just like them.</p></div>
-      <div class="card stepc"><div class="n">3</div><h3>Read, download, print</h3><p>Watch the pages appear, then download the book or order a hardcover.</p></div>
+      <div class="card stepc"><div class="n">1</div><h3>Pick an adventure</h3><p>Two beloved fairy tales, with your child in the starring role.</p></div>
+      <div class="card stepc"><div class="n">2</div><h3>Add a photo</h3><p>We turn your child into a storybook hero who looks just like them.</p></div>
+      <div class="card stepc"><div class="n">3</div><h3>Read, share, treasure</h3><p>Read it together tonight, or order a hardcover to keep forever.</p></div>
     </div>
   </section>
 
@@ -166,7 +166,7 @@
   <section class="block">
     <p class="kicker">The stories</p>
     <h2>Choose their adventure</h2>
-    <p class="sub">Every book has 20 illustrated pages and an About Me page with your child's photo.</p>
+    <p class="sub">Twenty beautifully illustrated pages, plus an About Me page that makes it truly theirs.</p>
     <div class="stories">
       {% for s in stories %}
         <div class="card storyc">
@@ -174,7 +174,7 @@
             {% for u in (s.samples or [none, none, none]) %}<div>{% if u %}<img src="{{ u.url }}" alt="" loading="lazy" style="transform-origin: center {{ u.focus }}">{% endif %}</div>{% endfor %}
           </div>
           <div class="body">
-            <span class="pill {{ s.id }}">{{ "Your child and the Beanstalk" if s.id == "jack" else "Featuring your child" }}</span>
+            <span class="pill {{ s.id }}">{{ "Up, up into the clouds" if s.id == "jack" else "Into the deep, dark woods" }}</span>
             <h3>{{ s.title }}</h3>
             <p>{{ s.blurb }}</p>
           </div>
@@ -186,25 +186,25 @@
 
   <section class="block">
     <p class="kicker">Pricing</p>
-    <h2>Simple pricing</h2>
-    <p class="sub">Add money to your wallet, then make books whenever you like. No subscription.</p>
+    <h2>A gift they'll never forget</h2>
+    <p class="sub">No subscription. Make a book whenever inspiration strikes.</p>
     <div class="prices">
       <div class="card price">
-        <h3>Digital book</h3>
+        <h3>Instant digital book</h3>
         <div class="amt">{{ money(price) }} <small>per book</small></div>
-        <ul><li>20 illustrated pages</li><li>Download it any time from your account</li><li>Free redo if a page doesn't turn out</li></ul>
+        <ul><li>20 illustrated pages starring your child</li><li>Ready to read in about a minute</li><li>Yours to keep and download anytime</li></ul>
       </div>
       <div class="card price feature">
-        <span class="tag">Keepsake</span>
-        <h3>Printed hardcover</h3>
+        <span class="tag">Best gift</span>
+        <h3>Hardcover keepsake</h3>
         <div class="amt">{{ money(print_price) }} <small>shipping included</small></div>
-        <ul><li>6 × 9 inch full-color hardcover</li><li>See every page before you order</li><li>Shipped anywhere in the US</li></ul>
+        <ul><li>Premium 6 × 9 inch full-color hardcover</li><li>Preview every page before you order</li><li>Delivered to your door, anywhere in the US</li></ul>
       </div>
     </div>
   </section>
 
   <div class="final">
-    <div><h2>Ready to make their book?</h2><p>It only takes a minute, and you can read the whole book before ordering a printed copy.</p></div>
-    {{ google_button('Start with Google') }}
+    <div><h2>Give them a story they'll never forget</h2><p>Their very own fairy tale, ready in about a minute. Perfect for birthdays, holidays, and grandparents.</p></div>
+    {{ google_button('Create their book') }}
   </div>
 {% endblock %}

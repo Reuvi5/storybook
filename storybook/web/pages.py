@@ -139,7 +139,7 @@ def story_cards() -> list:
         cover = showcase["url"] if showcase else None
         samples = [pic(n) for n in stories.SAMPLES.get(s["id"], (4, 11, 17))] if ready else []
         cards.append({"id": s["id"], "title": s["title"], "hero": s["hero_name"], "ready": ready, "cover": cover, "cover_focus": showcase["focus"] if showcase else "center",
-                      "samples": samples, "blurb": stories.page_text(s, s["pages"][0], "your child")})
+                      "samples": samples, "blurb": s.get("pitch") or stories.page_text(s, s["pages"][0], "your child")})
     return cards
 
 

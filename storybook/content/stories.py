@@ -50,6 +50,8 @@ STORIES["jack"] = {
     "id": "jack",
     "title": "Jack and the Beanstalk",
     "title_with_name": "{name} and the Beanstalk",
+    "pitch": "Trade a cow for magic beans, climb a beanstalk all the way to the clouds, and outsmart a giant to "
+             "bring home a hen that lays golden eggs.",
     "hero_name": "Jack",
     "default_pronoun": "they",
     "hero_outfit": "a loose cream-colored linen shirt with rolled sleeves, a brown wool vest, dark brown knee-length trousers, and worn brown leather boots",
@@ -144,6 +146,8 @@ STORIES["red"] = {
     "id": "red",
     "title": "Little Red Riding Hood",
     "hero_name": "Little Red Riding Hood",
+    "pitch": "A walk through the woods to Grandmother's house becomes a real adventure, with a sneaky wolf, a brave "
+             "rescue and a happy ending.",
     "default_pronoun": "they",
     "hero_outfit": ("a bright red hooded cape tied at the neck, with the hood down so the face and hair are fully visible. "
                     "Under the cape: if the child is a girl, a simple knee-length storybook dress (a cream blouse with "

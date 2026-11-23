@@ -11,7 +11,7 @@ def test_home_page_for_visitors(client, prepared):
     page = client.get("/").get_data(as_text=True)
     assert "Your child is the" in page and "Sign in with Google" in page
     assert "{name}" not in page and "{him}" not in page            # story blurbs are filled in
-    assert "Once upon a time, your child lived with Mother" in page
+    assert "magic beans" in page and "Big Bad Wolf" in page               # each story is pitched
 
 
 @pytest.mark.parametrize("path", ["/books", "/wallet", "/orders"])
